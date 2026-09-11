@@ -281,4 +281,256 @@ The system must treat uncertain commit state as distinct from ordinary timeout.
 * A multi-model routing layer
 * A generalized plugin framework
 
-``` The implementation should preserve useful seams without adding infrastructure that does not support the vertical slice. ```
+# Phase 2: Execution Roadmap
+
+### Objective
+
+Turn the condensed notes into an executable sequence of implementation milestones. Each milestone must produce a reviewable artifact, tests, and a commit.
+
+## Milestone 1: Repository Baseline
+
+### Deliverables:
+
+* Repository structure
+* TypeScript configuration
+* Test runner
+* Linting and formatting
+* .env.example
+* Initial README
+* Condensed engineering notebook
+* Basic CI workflow
+
+### Validation:
+
+* Install succeeds
+* Type checking succeeds
+* Tests execute
+* Linting succeeds
+* CI runs on pull requests
+
+
+## Milestone 2: Requirements and Acceptance Criteria
+
+### Deliverables:
+
+* Numbered requirements
+* Acceptance criteria
+* BDD scenarios
+* Traceability convention
+* Initial test matrix
+
+### Validation:
+
+* Every core requirement has at least one acceptance criterion
+* Every acceptance criterion maps to a test or documented manual check
+* Requirements cover discovery, artifacts, replay, policy, evidence, handoff, and surfaces
+
+
+## Milestone 3: Capability Artifact Contract
+
+### Deliverables:
+
+* Artifact TypeScript types
+* Runtime schema validation
+* Example valid artifact
+* Invalid artifact fixtures
+* Artifact serialization rules
+* Artifact versioning fields
+* Input and output contracts
+* Step, target, checkpoint, policy, recovery, and outcome definitions
+
+### Validation:
+
+* Valid artifacts parse successfully
+* Malformed artifacts fail before execution
+* Unknown or undeclared inputs are rejected
+* Unsupported action effects are rejected
+* Artifact serialization is deterministic
+* Artifact does not depend on Playwright types
+
+## Milestone 4: Surface Adapter Contract
+
+### Deliverables:
+
+* Surface adapter interface
+* Observation model
+* Surface action model
+* Action result model
+* Session state model
+* Evidence model
+* Browser adapter boundary
+* Test double adapter
+
+### Validation:
+
+* Replay depends only on the adapter interface
+* A fake adapter can execute replay tests
+* Observation data is not HTML-specific
+* Session state can represent active, expired, paused, and unknown states
+
+## Milestone 5: Deterministic Replay Engine
+
+### Deliverables:
+
+* Artifact loading
+* Input validation
+* Ordered target resolution
+* Precondition checks
+* Action execution
+* Postcondition checks
+* Step progression
+* Deterministic result classification
+* Replay trace
+
+### Validation:
+
+* Replay never invokes the LLM
+* Replay follows artifact-defined locator order
+* Replay stops when a checkpoint fails
+* Replay returns explicit outcomes
+* Replay rejects malformed artifacts before touching the surface
+* Replay produces a trace suitable for evidence and debugging
+
+## Milestone 6: Policy Enforcement
+
+### Deliverables:
+
+* Action effect classification
+* Capability policy
+* Invocation authorization
+* Approval requirement handling
+* Policy denial result
+* Untrusted UI-content handling
+* Adversarial instruction-injection test
+
+### Validation:
+
+* Read actions can execute when authorized
+* Irreversible actions require approval
+* Privileged actions are denied without authorization
+* UI text cannot change policy
+* Policy violations are explicit results, not generic failures
+
+## Milestone 7: Outcome and Failure Semantics
+
+### Deliverables:
+
+* Result taxonomy
+* Business outcome contracts
+* Recoverable condition handling
+* Hard failure handling
+* Intervention-required handling
+* Ambiguous commit state
+* Retry rules
+* Reconciliation hook
+
+### Validation:
+
+* Business outcomes are not classified as infrastructure failures
+* Recoverable conditions can be retried only when safe
+* Irreversible actions do not blindly retry after uncertain transport failure
+* Ambiguous commit state is observable
+* Failure reasons are machine-readable
+
+## Milestone 8: Evidence and Redaction
+
+### Deliverables:
+
+* Evidence capture interface
+* Step-level evidence references
+* Redaction rules
+* Sensitive-value normalization
+* State fingerprinting
+* Evidence retention metadata
+
+### Validation:
+
+* Evidence is captured at required checkpoints
+* Sensitive values are redacted
+* Raw credentials and session tokens are not persisted
+* Fingerprints do not include raw PII
+* Evidence can explain why replay succeeded, stopped, or escalated
+
+## Milestone 9: Human Handoff
+
+### Deliverables:
+
+* Session ownership state machine
+* Pause and resume behavior
+* Human takeover
+* Return-to-automation transition
+* Ownership conflict handling
+* Same-session test double
+
+### Validation:
+
+* Automation can pause at a declared checkpoint
+* Human ownership prevents concurrent automation actions
+* Automation resumes only after explicit handback
+* Session state is preserved across handoff
+* Ownership conflicts are explicit and recoverable
+
+
+## Milestone 10: Discovery and Compilation
+
+### Deliverables:
+
+* Discovery interface
+* Model provider boundary
+* Surface observation loop
+* Successful trace representation
+* Capability compiler
+* Policy gate before execution
+* One real discovery run
+* Stored compiled artifact
+
+### Validation:
+
+* Discovery can produce a trace
+* The trace can compile into a valid artifact
+* The artifact can replay without the LLM
+* Discovery cannot bypass policy
+* Live model execution is isolated from deterministic tests
+
+## Milestone 11: Legacy Surface Demonstration
+
+### Deliverables:
+
+* Browser-based legacy demo surface
+* Stable but awkward controls
+* Validation and permission states
+* Slow response simulation
+* Optional terminal-shaped adapter or fixture
+* End-to-end scenarios
+
+### Validation:
+
+* The same capability model works against the legacy surface
+* Locator fallback behavior is demonstrated
+* Slow responses and session expiration are tested
+* Business outcomes are distinguishable from technical failures
+
+## Milestone 12: CI, Documentation, and Report
+
+### Deliverables:
+
+* Full CI checks
+* Unit tests
+* Contract tests
+* Integration tests
+* Playwright E2E tests
+* Artifact schema validation
+* Dependency audit
+* REPORT.md
+* Architecture diagram
+* ADRs
+* Known limitations
+* Production evolution notes
+
+### Validation:
+
+* CI is deterministic by default
+* Live discovery is manual and secret-gated
+* The report explains decisions and tradeoffs
+* The report identifies deliberate non-goals
+* Test evidence is linked to requirements
