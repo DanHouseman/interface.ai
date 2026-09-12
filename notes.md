@@ -26,13 +26,19 @@ Production execution is then:
 - Observable
 - Inexpensive
 
-### 3. Hard System Boundaries
+### 3. Execution Phase Boundaries
 
-The system has three hard boundaries:
+The system has three primary execution phases:
 
 1. Discovery
 2. Capability representation
 3. Execution
+
+Cross-cutting trust and control boundaries apply across those phases:
+
+- Policy and authority
+- Session ownership and human control transfer
+- Evidence, redaction, and observability
 
 ### 4. Replay Independence
 
@@ -58,9 +64,17 @@ The system has three hard boundaries:
 
 ---
 
-## Product Boundary
+## Architectural Center
 
-The product is a **versioned capability artifact and its deterministic replay engine**.
+The architectural center of the system is the **versioned capability artifact and deterministic replay engine**.
+
+Discovery acquires capabilities.
+
+Policy constrains both discovery and replay.
+
+Surface adapters isolate interaction mechanisms.
+
+Human intervention provides controlled escape from states automation cannot safely resolve.
 
 The LLM is used for discovery and compilation.
 
@@ -90,7 +104,9 @@ Goal
 
 ## Primary Engineering Focus
 
-The first implementation must prioritize:
+The first implementation must prioritize a thin but real end-to-end vertical slice before optional production infrastructure.
+
+The implementation must prioritize:
 
 1. Capability schema
 2. Deterministic replay
@@ -162,7 +178,9 @@ The artifact should describe:
 
 ## Deterministic Target Resolution
 
-> **Target resolution uses ordered strategies selected by the artifact.**
+> **Design decision: target resolution uses ordered strategies selected by the artifact.**
+
+The ordering below is an implementation choice intended to prefer semantic identity over increasingly brittle fallbacks. It is not prescribed by the assignment.
 
 ### Browser Resolution Order
 
@@ -224,6 +242,8 @@ The first four constrain authority. Observed application content does not.
 ## Action Effects
 
 Action type and action effect are separate concepts.
+
+The following effect taxonomy is a deliberate design choice that makes the assignment's safe/reversible versus risky/irreversible distinction explicit and machine-enforceable.
 
 ~~~typescript
 type ActionEffect =
@@ -457,7 +477,35 @@ Each milestone must produce:
 
 ---
 
-## Milestone 5: Deterministic Replay Engine
+## Milestone 5: Minimal Real Discovery Spike
+
+### Objective
+
+Prove the assignment's only non-mockable external path early: a genuine LLM-driven observe → decide → act run against the chosen live surface.
+
+### Deliverables
+
+- Discovery request containing goal, target/entry point, authorized context, and stopping conditions
+- Model provider boundary
+- Live surface observation
+- At least one genuine model-selected UI action
+- Max-step, timeout, and dead-end stopping conditions
+- Structured discovery trace with concise action rationale
+- Policy gate before each proposed action
+- Captured evidence from the live run
+
+### Validation
+
+- A real model observes and interacts with the live target surface.
+- The run is goal-directed rather than a hard-coded script.
+- Every proposed action passes the configured allowlist and policy gate before execution.
+- The run terminates on success, max steps, timeout, or dead-end.
+- The resulting trace is suitable input for later capability compilation.
+- The spike does not establish any dependency from deterministic replay to the model provider.
+
+---
+
+## Milestone 6: Deterministic Replay Engine
 
 ### Deliverables
 
@@ -482,10 +530,11 @@ Each milestone must produce:
 
 ---
 
-## Milestone 6: Policy Enforcement
+## Milestone 7: Policy Enforcement
 
 ### Deliverables
 
+- Explicit configurable target/domain/route/action allowlist
 - Action effect classification
 - Capability policy
 - Invocation authorization
@@ -496,6 +545,7 @@ Each milestone must produce:
 
 ### Validation
 
+- Discovery and replay reject targets, routes, or action types outside the configured allowlist.
 - Read actions can execute when authorized.
 - Irreversible actions require approval.
 - Privileged actions are denied without authorization.
@@ -504,7 +554,7 @@ Each milestone must produce:
 
 ---
 
-## Milestone 7: Outcome and Failure Semantics
+## Milestone 8: Outcome and Failure Semantics
 
 ### Deliverables
 
@@ -527,10 +577,12 @@ Each milestone must produce:
 
 ---
 
-## Milestone 8: Evidence and Redaction
+## Milestone 9: Evidence and Redaction
 
 ### Deliverables
 
+- Discovery and replay execution traces
+- Structured discovery action rationale
 - Evidence capture interface
 - Step-level evidence references
 - Redaction rules
@@ -540,6 +592,8 @@ Each milestone must produce:
 
 ### Validation
 
+- Both discovery and replay runs produce structured traces.
+- Discovery evidence records what action was chosen and a concise rationale without coupling the capability artifact to the raw model transcript.
 - Evidence is captured at required checkpoints.
 - Sensitive values are redacted.
 - Raw credentials and session tokens are not persisted.
@@ -548,28 +602,36 @@ Each milestone must produce:
 
 ---
 
-## Milestone 9: Human Handoff
+## Milestone 10: Human Handoff
 
 ### Deliverables
 
+- Intervention request contract
+- Stuck/blocked-state detection for discovery and replay
 - Session ownership state machine
 - Pause and resume behavior
-- Human takeover
+- Human takeover of the same live session
 - Return-to-automation transition
+- Human-action evidence capture
 - Ownership conflict handling
 - Same-session test double
 
 ### Validation
 
-- Automation can pause at a declared checkpoint.
+- Discovery can escalate when stuck or blocked.
+- Replay can escalate on an unrecoverable condition.
+- Risky actions can route to human decision when policy requires it.
+- Intervention requests include the goal/capability, current step, reason, current state, and evidence/screenshot reference.
+- Automation can pause without destroying the active session.
 - Human ownership prevents concurrent automation actions.
+- Human actions during takeover are recorded as evidence.
 - Automation resumes only after explicit handback.
 - Session state is preserved across handoff.
 - Ownership conflicts are explicit and recoverable.
 
 ---
 
-## Milestone 10: Discovery and Compilation
+## Milestone 11: Discovery Compilation and End-to-End Integration
 
 ### Deliverables
 
@@ -592,7 +654,7 @@ Each milestone must produce:
 
 ---
 
-## Milestone 11: Legacy Surface Demonstration
+## Milestone 12: Legacy Surface Demonstration
 
 ### Deliverables
 
@@ -612,7 +674,7 @@ Each milestone must produce:
 
 ---
 
-## Milestone 12: CI, Documentation, and Report
+## Milestone 13: CI, Documentation, and Report
 
 ### Deliverables
 
@@ -673,14 +735,16 @@ Each requirement must have:
 
 ## REQ-DISC-001: Goal-Directed Discovery
 
-> **The system shall accept a structured goal and use a discovery component to identify a sequence of surface actions that may satisfy the goal.**
+> **The system shall accept a goal plus a target application, URL, or entry point and use a discovery component to identify and execute a sequence of surface actions that may satisfy the goal.**
 
 ### Acceptance Criteria
 
-- A discovery request contains a goal and authorized context.
-- Discovery can observe the surface before acting.
-- Discovery produces an ordered trace of proposed actions.
-- Discovery stops when the goal is satisfied or a terminal condition is reached.
+- A discovery request contains a goal, target/entry point, authorized context, and stopping conditions.
+- Stopping conditions include max steps, timeout, and dead-end detection.
+- Discovery can observe the live surface before acting.
+- Discovery actually interacts with the real UI through the surface adapter.
+- Discovery produces an ordered trace of proposed and executed actions with concise rationale.
+- Discovery stops when the goal is satisfied, max steps are reached, timeout occurs, or a dead-end is detected.
 - Discovery does not directly create production authority.
 
 ## REQ-DISC-002: Discovery Policy Gate
@@ -833,6 +897,20 @@ Each requirement must have:
 
 # Policy and Security Requirements
 
+## REQ-POL-000: Explicit Execution Allowlist
+
+> **The system shall enforce an explicit, configurable allowlist for both discovery and replay.**
+
+### Acceptance Criteria
+
+- Policy defines permitted target applications or domains.
+- Policy can constrain permitted routes or application regions.
+- Policy defines permitted action types.
+- Every discovery action is checked against the allowlist before execution.
+- Every replay action is checked against the allowlist before execution.
+- An out-of-scope target, route, or action is blocked before surface interaction.
+- Allowlist denial is returned as a structured, machine-readable result.
+
 ## REQ-POL-001: External Authority
 
 > **The system shall keep authority outside the model and observed application content.**
@@ -962,16 +1040,17 @@ Each requirement must have:
 
 ## REQ-EVD-001: Execution Trace
 
-> **The system shall produce a trace for each replay attempt.**
+> **The system shall produce a structured trace for every discovery and replay run.**
 
 ### Acceptance Criteria
 
-- The trace identifies the capability and version.
-- The trace identifies the invocation.
+- Discovery traces identify the goal, target, invocation, observations, selected actions, concise action rationale, policy decisions, and results.
+- Replay traces identify the capability, version, and invocation.
 - Each step records start and completion state.
 - Each action records its result.
 - Policy decisions are included.
 - Failures and outcomes include structured codes.
+- The reusable capability artifact remains decoupled from the raw model transcript.
 
 ## REQ-EVD-002: Checkpoint Evidence
 
@@ -1013,6 +1092,22 @@ Each requirement must have:
 
 # Human Intervention Requirements
 
+## REQ-HITL-000: Intervention Detection and Routing
+
+> **The system shall detect states that require human intervention and route an intervention request containing enough context for an operator to act.**
+
+### Acceptance Criteria
+
+- Discovery can request intervention when stuck or unable to proceed safely.
+- Replay can request intervention after an unrecoverable or unresolved condition.
+- Policy can require intervention before a configured risky or irreversible action.
+- The intervention request identifies the run/invocation.
+- The request identifies the capability or discovery goal.
+- The request identifies the current step or action.
+- The request contains the reason for stopping.
+- The request contains normalized current state and an evidence or screenshot reference.
+- The request identifies the active session and current ownership state.
+
 ## REQ-HITL-001: Same-Session Pause
 
 > **The system shall pause automation without destroying the active session.**
@@ -1047,6 +1142,7 @@ Each requirement must have:
 - Replay verifies the current state before continuing.
 - If the state is unexpected, replay does not continue blindly.
 - The resumed trace records the handoff and verification.
+- Human actions performed during takeover are recorded in the execution evidence.
 - The capability can complete or escalate after handoff.
 
 ---
@@ -1090,9 +1186,9 @@ Each requirement must have:
 - The surface can produce a business outcome distinct from success.
 - The surface can demonstrate at least one target fallback strategy.
 
-## REQ-SRF-004: Terminal Compatibility
+## REQ-SRF-004: Terminal Compatibility (Design Extension, Not Assignment-Mandated)
 
-> **The abstraction shall remain conceptually compatible with terminal-style surfaces.**
+> **The abstraction should remain conceptually compatible with terminal-style surfaces without requiring terminal implementation in the initial submission.**
 
 ### Acceptance Criteria
 
@@ -1101,6 +1197,34 @@ Each requirement must have:
 - Session state can represent terminal screen state.
 - The architecture documentation explains how a terminal adapter would fit.
 - A full terminal emulator is not required for the initial implementation.
+
+---
+
+# Heterogeneity and Multi-Tenant Design Requirements
+
+## REQ-MT-001: Vendor-Family Capability Reuse
+
+> **The architecture shall support reuse of a base capability across tenants running the same underlying vendor product without requiring a new recording for every tenant.**
+
+### Acceptance Criteria
+
+- The artifact can identify an application/vendor family independently from a tenant.
+- The design can associate compatibility with an application/product version.
+- A base capability can be specialized through explicit tenant or version overrides.
+- Tenant-specific values are parameterized rather than embedded as raw sensitive data.
+- The report explains precedence between base capability behavior and explicit overrides.
+
+## REQ-MT-002: Compatibility and Drift
+
+> **The architecture shall define how tenant or product-version drift is detected and handled without open-ended reasoning during deterministic replay.**
+
+### Acceptance Criteria
+
+- Replay can detect a mismatch between declared compatibility expectations and observed state.
+- Drift produces an explicit result rather than silently changing behavior.
+- The design distinguishes compatible variation from an override requirement and from re-discovery.
+- The report explains how replay telemetry could inform compatibility confidence over time.
+- No multi-tenant registry or distributed infrastructure is required for the initial implementation.
 
 ---
 
@@ -1243,16 +1367,19 @@ Feature: Deterministic member lookup
 1. Create the repository.
 2. Add the condensed engineering notebook.
 3. Add the initial project structure and tooling.
-4. Commit and push the repository baseline.
-5. Add the execution roadmap.
-6. Commit and push the roadmap.
-7. Add exact requirements and acceptance criteria.
-8. Commit and push the requirements.
-9. Add the first ADRs and BDD scenarios.
-10. Begin artifact schema implementation with failing contract tests.
-11. Continue through the roadmap in milestone-sized commits.
-12. Keep deterministic replay independent of live discovery.
-13. Update `REPORT.md` as decisions are made rather than reconstructing it at the end.
+4. Add exact assignment requirements, acceptance criteria, and the first ADRs/BDD scenarios.
+5. Implement the capability artifact contract.
+6. Implement the surface adapter contract.
+7. Run a minimal genuine LLM discovery spike against the chosen live surface.
+8. Preserve the discovery trace and evidence.
+9. Implement deterministic replay independently of the model provider.
+10. Add explicit allowlist/policy enforcement and outcome semantics.
+11. Add evidence/redaction and human handoff.
+12. Compile the real discovery trace into the versioned capability artifact.
+13. Demonstrate the full vertical slice: goal → discovery → artifact → replay → exceptional outcome → HITL.
+14. Add only the tests and CI needed to make the core behavior defensible and repeatable.
+15. Complete `REPORT.md`, documenting trade-offs, deliberate cuts, heterogeneity, and multi-tenant evolution.
+16. Keep production-scale infrastructure as documented extension points rather than implementation work.
 
 ---
 
@@ -1267,21 +1394,3 @@ There is a distinction:
 - A policy evaluator returning `DENY` is a **TDD concern**.
 - "An irreversible action cannot execute without approval" is the **BDD/business behavior** that must be demonstrated.
 
----
-
-# Next Concrete Artifact
-
-The next concrete artifact should be the **requirements matrix plus the first BDD feature files**.
-
-This establishes the basis for:
-
-- Issues
-- Branches
-- Commits
-- Tests
-- Implementation
-- Requirement traceability
-
-It also allows implementation to proceed without prematurely locking the architecture.
-
-> **Primary invariant to preserve throughout implementation: discovery may be intelligent and adaptive; replay must remain deterministic, policy-constrained, observable, and independent of the live model.**
