@@ -1,3 +1,6 @@
+# Plan: Milestone 12 | CI / Final Verification
+# Validates type safety, deterministic tests, and build integrity on every PR.
+
 name: CI
 
 on:
