@@ -1,5 +1,5 @@
 {
-  "name": "interface-ai-assignment",
+  "name": "interface-ai-computer-use-automation",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -16,9 +16,5 @@
     "@types/node": "^24.3.0",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"
-  },
-  "allowScripts": {
-    "esbuild@0.28.2": true,
-    "fsevents@2.3.3": true
   }
 }

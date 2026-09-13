@@ -3,3 +3,7 @@ export * from "./artifact/load-capability.js";
 export * from "./surface/surface-adapter.js";
 export * from "./surface/fake-surface-adapter.js";
 export * from "./domain/contracts.js";
+export * from "./policy/policy-evaluator.js";
+export * from "./replay/replay-contracts.js";
+export * from "./replay/checkpoint-evaluator.js";
+export * from "./replay/replay-engine.js";

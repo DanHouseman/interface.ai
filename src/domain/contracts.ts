@@ -38,4 +38,9 @@ export interface ExecutionContext {
   capabilityId: string;
   capabilityVersion: string;
   inputs: Readonly<Record<string, JsonValue>>;
+  // Plan: Milestone 7 | REQ-POL-003
+  // Approval is invocation-scoped authority; it is never derived from model or UI content.
+  authorization?: {
+    readonly approvedStepIds?: readonly string[];
+  };
 }
