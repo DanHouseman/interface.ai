@@ -7,3 +7,5 @@ export * from "./policy/policy-evaluator.js";
 export * from "./replay/replay-contracts.js";
 export * from "./replay/checkpoint-evaluator.js";
 export * from "./replay/replay-engine.js";
+export * from "./evidence/redactor.js";
+export * from "./evidence/evidence-store.js";

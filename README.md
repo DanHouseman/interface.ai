@@ -1,5 +1,48 @@
 # Implementation Progress
 
+```But first reorganize this Readme```
+
+## 09/15/2026 Completed
+
+### Requirements
+
+-   `REQ-OUT-001...005`
+-   `REQ-EVD-001...003`
+-   `REQ-POL-004`
+
+### Tests
+
+-   `test/outcomes-evidence.test.ts`
+-   Updated `test/replay-policy.test.ts` for expanded Milestone 9
+    evidence semantics.
+
+### Milestone 8: Outcomes and Recovery
+
+-   Completed the explicit replay result taxonomy: `SUCCESS`,
+    `BUSINESS_OUTCOME`, `RECOVERABLE`, `INTERVENTION_REQUIRED`, and
+    `FAILURE`.
+-   Completed business outcome handling as part of the capability
+    contract rather than treating expected domain states as exceptions.
+-   Completed bounded, action aware recovery behavior.
+-   Added ambiguous commit reconciliation before escalation.
+-   Prevented automatic retry when the result of an irreversible
+    operation cannot be established safely.
+-   Added explicit session expiration detection and termination.
+-   Replay no longer continues acting against an invalid session.
+
+### Milestone 9: Evidence and Observability
+
+-   Expanded the structured replay trace.
+-   Added evidence capture at declared checkpoints.
+-   Added terminal failure evidence.
+-   Added before and after evidence around configured high risk actions.
+-   Added explicit evidence capture failure trace events.
+-   Added JSON evidence persistence suitable for `/evidence/`.
+-   Added sensitive value redaction before persistence.
+-   Added defensive redaction for credential and token shaped fields.
+-   Evidence failures remain observable without replacing the actual
+    execution result.
+
 ## 09/12/2026 Completed
 
 ### Requirements
@@ -23,12 +66,11 @@
 -   `REQ-OUT-003/004`
 -   `REQ-HITL-001...003`
 
-
-
 # Current Scope
 
-This implementation establishes the load bearing contracts needed before
-deeper model or browser SDK integration:
+This implementation establishes the load bearing contracts and
+deterministic execution path needed before deeper model or browser SDK
+integration:
 
 1.  A typed, runtime validated capability artifact.
 2.  A surface abstraction that deterministic replay can depend on
@@ -37,11 +79,15 @@ deeper model or browser SDK integration:
     `SurfaceAdapter`.
 4.  An explicit policy boundary controlling what replay is authorized to
     execute.
+5.  An explicit outcome and recovery model distinguishing successful
+    execution, business outcomes, recoverable conditions, intervention,
+    and hard failure.
+6.  Action aware recovery with ambiguous commit reconciliation.
+7.  Structured execution evidence with checkpoint capture, failure
+    capture, persistence, and redaction.
 
 The implementation does **not** yet include the real Playwright browser
 adapter or LLM driven discovery.
-
-
 
 # Run
 
@@ -51,8 +97,6 @@ npm test
 npm run typecheck
 npm run build
 ```
-
-
 
 # Design Invariants
 
@@ -67,8 +111,6 @@ npm run build
 -   Replay determines what happens next.
 -   `SurfaceAdapter` determines how it happens.
 
-
-
 # Requirement Traceability in Code
 
 Production code and tests use concise comments such as:
@@ -81,21 +123,60 @@ boundary or test without attempting to replace the requirements matrix.
 
 ### Current coverage:
 
-| Area | Plan / requirements | Implementation |
-|---|---|---|
-| Capability contract | Milestone 3; `REQ-ART-001..004` | `src/artifact/*`, `test/capability-schema.test.ts` |
-| Explicit allowlist metadata | Milestone 7; `REQ-POL-000` | `capability-schema.ts` |
-| Ordered target strategies | Milestones 3/6; `REQ-RPL-002` | `capability-schema.ts`, `surface-adapter.ts` |
-| Checkpoint representation | Milestones 3/6; `REQ-RPL-003` | `capability-schema.ts` |
-| Recovery / ambiguous commit safety | Milestone 8; `REQ-OUT-003/004` | schema refinement + tests |
-| Surface abstraction | Milestone 4; `REQ-SRF-001`, `REQ-RPL-004` | `surface-adapter.ts` |
-| Same-session ownership seam | Milestone 10; `REQ-HITL-001..003` | fake adapter + tests |
+  ----------------------------------------------------------------------------------
+  Area                    Plan / requirements     Implementation
+  ----------------------- ----------------------- ----------------------------------
+  Capability contract     Milestone 3;            `src/artifact/*`,
+                          `REQ-ART-001..004`      `test/capability-schema.test.ts`
+
+  Explicit allowlist      Milestone 7;            `capability-schema.ts`
+  metadata                `REQ-POL-000`           
+
+  Ordered target          Milestones 3/6;         `capability-schema.ts`,
+  strategies              `REQ-RPL-002`           `surface-adapter.ts`
+
+  Checkpoint              Milestones 3/6;         `capability-schema.ts`
+  representation          `REQ-RPL-003`           
+
+  Recovery / ambiguous    Milestone 8;            schema refinement + tests
+  commit safety           `REQ-OUT-003/004`       
+
+  Surface abstraction     Milestone 4;            `surface-adapter.ts`
+                          `REQ-SRF-001`,          
+                          `REQ-RPL-004`           
+
+  Same-session ownership  Milestone 10;           fake adapter + tests
+  seam                    `REQ-HITL-001..003`     
+
+  Explicit result         Milestone 8;            replay contracts + replay engine +
+  taxonomy                `REQ-OUT-001`           outcome tests
+
+  Business outcomes       Milestone 8;            replay result handling + outcome
+                          `REQ-OUT-002`           tests
+
+  Recoverable conditions  Milestone 8;            bounded action aware recovery
+                          `REQ-OUT-003`           
+
+  Ambiguous commits       Milestone 8;            reconciliation + escalation
+                          `REQ-OUT-004`           behavior
+
+  Session expiration      Milestone 8;            replay session validation + tests
+                          `REQ-OUT-005`           
+
+  Execution trace         Milestone 9;            structured replay trace
+                          `REQ-EVD-001`           
+
+  Checkpoint evidence     Milestone 9;            checkpoint + failure evidence
+                          `REQ-EVD-002`           capture
+
+  Evidence redaction      Milestone 9;            evidence persistence + redaction +
+                          `REQ-EVD-003`,          tests
+                          `REQ-POL-004`           
+  ----------------------------------------------------------------------------------
 
 As implementation expands, new code and tests should cite the relevant
 requirement IDs at the architectural boundary or behavior being proven
 rather than commenting every statement.
-
-
 
 # Current Implementation Slice
 
@@ -117,7 +198,6 @@ rather than commenting every statement.
 -   Structured replay trace and failure evidence references
     (`REQ-EVD-001/002` seam)
 
-
 ## Milestone 7: Policy Enforcement
 
 ### Implemented
@@ -134,20 +214,55 @@ rather than commenting every statement.
 Tests in `test/replay-policy.test.ts` are annotated with the milestone
 and requirement IDs demonstrated by each behavior.
 
+## Milestone 8: Outcomes and Recovery
 
+### Implemented
+
+-   Complete explicit result taxonomy (`REQ-OUT-001`)
+-   Declared business outcomes remain domain results rather than generic
+    execution failures (`REQ-OUT-002`)
+-   Bounded, action aware retry behavior (`REQ-OUT-003`)
+-   Ambiguous commit reconciliation before retry or escalation
+    (`REQ-OUT-004`)
+-   Unresolved commit ambiguity produces explicit intervention rather
+    than blind retry (`REQ-OUT-004`)
+-   Explicit session expiration detection and termination
+    (`REQ-OUT-005`)
+
+Tests in `test/outcomes-evidence.test.ts` and
+`test/replay-policy.test.ts` exercise the outcome and recovery paths.
+
+## Milestone 9: Evidence and Observability
+
+### Implemented
+
+-   Expanded structured execution trace (`REQ-EVD-001`)
+-   Checkpoint evidence capture (`REQ-EVD-002`)
+-   Terminal failure evidence capture (`REQ-EVD-002`)
+-   Evidence surrounding configured high risk operations (`REQ-EVD-002`)
+-   Explicit evidence capture failure events (`REQ-EVD-002`)
+-   JSON evidence persistence suitable for repository evidence
+    (`REQ-EVD-001`, `REQ-EVD-002`)
+-   Sensitive capability value redaction before persistence
+    (`REQ-EVD-003`)
+-   Credential and session token shaped field redaction (`REQ-EVD-003`,
+    `REQ-POL-004`)
+-   Evidence subsystem failures remain distinct from the primary
+    execution result
+
+`REQ-EVD-004` state fingerprints remain optional and are intentionally
+not part of this implementation slice.
 
 # Next Implementation
 
-1.  Complete Milestone 8 outcome and recovery behavior.
-2.  Complete Milestone 9 evidence generation and persistence.
-3.  Implement the minimal real browser `SurfaceAdapter`.
-4.  Run the genuine LLM driven discovery spike against a live surface.
-5.  Compile the successful discovery run into a reusable capability
+1.  Implement the minimal real browser `SurfaceAdapter`.
+2.  Run the genuine LLM driven discovery spike against a live surface.
+3.  Compile the successful discovery run into a reusable capability
     artifact.
-6.  Replay that artifact without an LLM and preserve the required
-    evidence.
-
-
+4.  Replay that artifact deterministically without an LLM.
+5.  Persist the discovery and replay evidence under `/evidence/`.
+6.  Implement the real same session HITL path against the browser
+    surface.
 
 # Architecture Tradeoffs and Decisions
 
@@ -188,8 +303,6 @@ Replay owns execution state and determines what happens next.
 One execution state machine. Much easier to reason about who has
 authority versus who has mechanism.
 
-
-
 ## 2. Intelligent Target Resolution vs. Deterministic Target Resolution
 
 It would be easy to let the model help when a selector fails. Probably
@@ -216,8 +329,6 @@ Bounded LLM recovery after deterministic resolution is exhausted.
 
 Important distinction though. That would be an explicit recovery mode,
 not normal replay behavior.
-
-
 
 ## 3. Generic Retry vs. Action Aware Recovery
 
@@ -260,8 +371,6 @@ This creates more states and makes recovery more complicated, but
 duplicating a financial transaction because `retry: 3` seemed reasonable
 would be a much worse design.
 
-
-
 ## 4. Playwright Replay Engine vs. SurfaceAdapter
 
 Direct Playwright implementation would absolutely be faster right now.
@@ -297,8 +406,6 @@ Citrix, or something else entirely.
 Need to avoid overengineering this abstraction though. I only need the
 seam right now, not five adapters proving that the seam exists.
 
-
-
 ## 5. Exceptions vs. Explicit Outcomes
 
 Initially tempting to have replay either return success or throw.
@@ -330,8 +437,6 @@ More contract surface, but much better semantics.
 It also gives the calling agent something machine readable instead of
 forcing it to interpret exception strings.
 
-
-
 ## 6. Checkpoint Verification vs. Trusting Successful Actions
 
 A click succeeding tells me almost nothing except that a click was
@@ -351,8 +456,6 @@ though this adds observations and therefore execution time.
 State transitions need evidence.
 
 Otherwise I am building a macro that assumes its own actions worked.
-
-
 
 ## 7. Global Approval vs. Invocation Scoped Approval
 
@@ -387,8 +490,6 @@ invocation
 That gives us somewhere to enforce stronger approval semantics later
 without changing the fundamental architecture.
 
-
-
 ## 8. General Theme Emerging
 
 Move intelligence toward **discovery**.
@@ -405,3 +506,230 @@ Production execution should be predictable enough that when something
 goes wrong I can identify the exact step, policy decision, target
 strategy, observed state, and resulting outcome without asking an LLM
 what it thinks happened.
+
+## 9. Immediate Escalation vs. Ambiguous Commit Reconciliation
+
+The first pass at ambiguous commits was safe, but conservative.
+
+If an irreversible action returned an ambiguous result, replay stopped
+rather than risk executing it twice.
+
+Could have left it there. Safe. Simple. Easy to explain.
+
+But uncertainty does not necessarily mean I need a human. Sometimes the
+application itself contains enough observable state to establish what
+actually happened.
+
+Chose deterministic reconciliation before escalation.
+
+``` text
+action
+  -> response lost
+  -> UNKNOWN_COMMIT_STATE
+      -> verify declared resulting state
+          -> proven committed
+              -> continue
+
+          -> proven not committed
+              -> retry only if permitted and safe
+
+          -> still unknown
+              -> INTERVENTION_REQUIRED
+```
+
+The distinction matters.
+
+**Unknown does not mean failed. Unknown means I have not established
+truth yet.**
+
+Could have used the model here to reason about whether the operation
+probably succeeded. Chose not to. That would put open ended reasoning
+back into replay exactly where I have been trying to remove it.
+
+Reconciliation therefore uses declared observable state. If the
+capability cannot establish what happened, it stops.
+
+That is less clever than guessing.
+
+Good.
+
+## 10. Failure Evidence Only vs. Evidence Around State Transitions
+
+Could capture evidence only when something fails.
+
+Less storage. Less instrumentation. Fewer adapter calls.
+
+The problem is that failure evidence gives me a picture of where the
+system ended up, but not necessarily enough information to establish how
+it got there.
+
+Chose to capture evidence around meaningful state transitions and
+declared checkpoints.
+
+A failed precondition now produces evidence associated with the
+checkpoint evaluation and evidence associated with the resulting
+terminal failure.
+
+This actually broke an older test.
+
+The test expected:
+
+``` text
+1 evidence artifact
+```
+
+The new implementation correctly produced:
+
+``` text
+checkpoint evidence
++
+terminal failure evidence
+```
+
+Initially looks like a regression. It wasn't. The old test was asserting
+the previous evidence contract.
+
+Chose to update the test rather than weaken the new implementation.
+
+Good reminder that tests protect behavior, but a test should not become
+an accidental architectural requirement just because it existed first.
+
+## 11. Evidence Failure vs. Execution Failure
+
+What happens if the application operation succeeds but evidence capture
+fails?
+
+Could fail the entire replay.
+
+Evidence is important. For some environments it may eventually be
+mandatory.
+
+But an observability failure cannot retroactively change what happened
+to the target application.
+
+If the transaction succeeded, it succeeded.
+
+Chose to preserve both truths independently.
+
+``` text
+application operation = SUCCESS
+evidence persistence  = FAILURE
+```
+
+The resulting trace records the evidence failure, but the execution
+result remains `SUCCESS`.
+
+Otherwise I would be allowing my telemetry system to rewrite application
+truth.
+
+There may eventually be policy that says:
+
+> Do not execute this action unless evidence capture is available.
+
+That is different.
+
+That decision belongs **before execution** as policy. Once an operation
+has happened, failure to record it does not mean it unhappened.
+
+## 12. Raw Evidence vs. Redacted Evidence
+
+Could persist observations exactly as received and sanitize them when
+somebody reads the evidence later.
+
+Maximum debugging information. Simplest capture path.
+
+Also means credentials, tokens, and PII may already be sitting on disk
+before sanitization ever occurs.
+
+That boundary is backwards.
+
+Chose redaction before persistence.
+
+``` text
+live application state
+        |
+        v
+normalization
+        |
+        v
+redaction
+        |
+        v
+persistent evidence
+```
+
+Known sensitive capability inputs can be removed because the artifact
+already tells me which values are sensitive. Credential and token shaped
+fields get another defensive redaction pass.
+
+I lose some debugging fidelity.
+
+Acceptable.
+
+The evidence store should explain execution behavior. It should not
+quietly become another database containing everything the automation has
+ever seen.
+
+## 13. Evidence References vs. Evidence Semantics
+
+The evidence test exposed another smaller boundary decision.
+
+`EvidenceReference` identifies the captured artifact. It does not
+currently contain the reason the evidence was captured.
+
+Could add `reason` to `EvidenceReference`.
+
+Would make the test convenient.
+
+But I would be changing a production contract because a unit test wanted
+an easier assertion.
+
+Chose not to.
+
+The evidence reference answers:
+
+> What evidence exists and where is it?
+
+The execution trace answers:
+
+> Why was this evidence captured and what was happening?
+
+Those are related concerns, but not the same concern.
+
+Keep the reference small. Keep execution semantics in the trace.
+
+## 14. Another Theme Emerging
+
+The further this gets, the more the architecture seems to revolve around
+different kinds of truth.
+
+The model can propose what to do.
+
+Policy establishes whether it is allowed.
+
+The capability establishes what was learned.
+
+Checkpoints establish what the application currently says is true.
+
+Reconciliation establishes what happened after an uncertain operation.
+
+Evidence preserves what was observed.
+
+The result contract tells the caller what that truth means.
+
+That gives me a useful rule:
+
+**Do not infer something when the system has a boundary capable of
+establishing it.**
+
+Do not infer authorization from the model.
+
+Do not infer success from a click.
+
+Do not infer failure from a lost response.
+
+Do not infer a business failure from an exception.
+
+Do not infer execution truth from whether evidence persistence worked.
+
+Make each boundary establish the thing it actually owns.

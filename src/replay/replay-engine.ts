@@ -22,12 +22,36 @@ export class DeterministicReplayEngine {
     for (const step of artifact.steps) {
       trace.push({ kind: "STEP_STARTED", stepId: step.id, timestamp: now() });
 
+      // Plan: Milestone 8 | REQ-OUT-005
+      // Session expiration is a first-class outcome. Replay never continues against an invalid session.
+      const sessionState = await this.surface.getSessionState();
+      trace.push({ kind: "SESSION_STATE", stepId: step.id, state: sessionState, timestamp: now() });
+      if (sessionState === "expired") {
+        return await this.failureWithEvidence(
+          trace,
+          "INTERVENTION_REQUIRED",
+          "SESSION_EXPIRED",
+          `Session expired before step '${step.id}'.`,
+          step.id,
+        );
+      }
+      if (sessionState !== "active") {
+        return await this.failureWithEvidence(
+          trace,
+          "INTERVENTION_REQUIRED",
+          "SESSION_NOT_ACTIVE",
+          `Session is '${sessionState}' before step '${step.id}'.`,
+          step.id,
+        );
+      }
+
       const businessOutcome = await this.detectBusinessOutcome(artifact, trace, step.id);
       if (businessOutcome) return businessOutcome;
 
       for (const checkpoint of step.preconditions) {
         const evaluation = await evaluateCheckpoint(artifact, checkpoint, this.surface);
         trace.push(checkpointEvent(step.id, checkpoint.id, "precondition", evaluation));
+        await this.captureCheckpointEvidence(trace, checkpoint.id, "precondition", step.id);
         if (!evaluation.passed) {
           return await this.failureWithEvidence(
             trace,
@@ -66,19 +90,30 @@ export class DeterministicReplayEngine {
         return await this.failureWithEvidence(trace, "FAILURE", actionBuild.failure.code, actionBuild.failure.message, step.id);
       }
 
+      // Plan: Milestone 9 | REQ-EVD-002
+      // High-risk writes get evidence on both sides of the action boundary.
+      if (step.action.effect === "irreversible_write" || step.action.effect === "privileged") {
+        await this.captureCheckpointEvidence(trace, `risk:${step.id}:before`, "precondition", step.id);
+      }
+
       const execution = await this.executeWithRecovery(step, actionBuild.action, trace);
       if (!execution.ok) {
         if (execution.error?.ambiguousCommit) {
-          return await this.failureWithEvidence(
-            trace,
-            "INTERVENTION_REQUIRED",
-            "UNKNOWN_COMMIT_STATE",
-            `Step '${step.id}' may have committed but the result could not be confirmed.`,
-            step.id,
-          );
-        }
-
-        if (execution.error?.recoverable) {
+          // Plan: Milestone 8 | REQ-OUT-004
+          // Reconciliation uses declared postconditions. A proven committed state may continue;
+          // unresolved uncertainty never becomes an automatic retry.
+          const reconciled = await this.reconcileAmbiguousCommit(artifact, step, trace);
+          if (!reconciled) {
+            return await this.failureWithEvidence(
+              trace,
+              "INTERVENTION_REQUIRED",
+              "UNKNOWN_COMMIT_STATE",
+              `Step '${step.id}' may have committed but reconciliation could not establish the result.`,
+              step.id,
+            );
+          }
+        } else if (execution.error?.recoverable) {
+          trace.push({ kind: "RECOVERY", stepId: step.id, code: execution.error.code, outcome: "EXHAUSTED", timestamp: now() });
           return await this.failureWithEvidence(
             trace,
             step.recovery.onFailure === "intervene" ? "INTERVENTION_REQUIRED" : "RECOVERABLE",
@@ -86,20 +121,25 @@ export class DeterministicReplayEngine {
             execution.error.message,
             step.id,
           );
+        } else {
+          return await this.failureWithEvidence(
+            trace,
+            step.recovery.onFailure === "intervene" ? "INTERVENTION_REQUIRED" : "FAILURE",
+            execution.error?.code ?? "ACTION_FAILED",
+            execution.error?.message ?? `Step '${step.id}' failed.`,
+            step.id,
+          );
         }
+      }
 
-        return await this.failureWithEvidence(
-          trace,
-          step.recovery.onFailure === "intervene" ? "INTERVENTION_REQUIRED" : "FAILURE",
-          execution.error?.code ?? "ACTION_FAILED",
-          execution.error?.message ?? `Step '${step.id}' failed.`,
-          step.id,
-        );
+      if (step.action.effect === "irreversible_write" || step.action.effect === "privileged") {
+        await this.captureCheckpointEvidence(trace, `risk:${step.id}:after`, "postcondition", step.id);
       }
 
       for (const checkpoint of step.postconditions) {
         const evaluation = await evaluateCheckpoint(artifact, checkpoint, this.surface);
         trace.push(checkpointEvent(step.id, checkpoint.id, "postcondition", evaluation));
+        await this.captureCheckpointEvidence(trace, checkpoint.id, "postcondition", step.id);
         if (!evaluation.passed) {
           return await this.failureWithEvidence(
             trace,
@@ -111,12 +151,15 @@ export class DeterministicReplayEngine {
         }
       }
 
+      trace.push({ kind: "STEP_COMPLETED", stepId: step.id, timestamp: now() });
+
       const afterStepOutcome = await this.detectBusinessOutcome(artifact, trace, step.id);
       if (afterStepOutcome) return afterStepOutcome;
     }
 
     const success = await evaluateCheckpoint(artifact, artifact.successCheckpoint, this.surface);
     trace.push(checkpointEvent(undefined, artifact.successCheckpoint.id, "success", success));
+    await this.captureCheckpointEvidence(trace, artifact.successCheckpoint.id, "success");
     if (!success.passed) {
       return await this.failureWithEvidence(
         trace,
@@ -228,6 +271,8 @@ export class DeterministicReplayEngine {
         return last;
       }
 
+      trace.push({ kind: "RECOVERY", stepId: step.id, code: last.error.code, outcome: "RETRY", timestamp: now() });
+
       if (step.recovery.retry.backoffMs > 0) {
         await delay(step.recovery.retry.backoffMs);
       }
@@ -247,6 +292,7 @@ export class DeterministicReplayEngine {
       const evaluation = await evaluateCheckpoint(artifact, outcome.checkpoint, this.surface);
       trace.push(checkpointEvent(stepId, outcome.checkpoint.id, "business_outcome", evaluation));
       if (evaluation.passed) {
+        await this.captureCheckpointEvidence(trace, outcome.checkpoint.id, "business_outcome", stepId);
         return {
           disposition: "BUSINESS_OUTCOME",
           code: outcome.code,
@@ -280,6 +326,52 @@ export class DeterministicReplayEngine {
     return outputs;
   }
 
+  // Plan: Milestone 8 | REQ-OUT-004
+  private async reconcileAmbiguousCommit(
+    artifact: CapabilityArtifact,
+    step: CapabilityStep,
+    trace: ReplayTraceEvent[],
+  ): Promise<boolean> {
+    if (step.postconditions.length === 0) {
+      trace.push({ kind: "RECOVERY", stepId: step.id, code: "UNKNOWN_COMMIT_STATE", outcome: "AMBIGUOUS", timestamp: now() });
+      return false;
+    }
+
+    for (const checkpoint of step.postconditions) {
+      const evaluation = await evaluateCheckpoint(artifact, checkpoint, this.surface);
+      trace.push(checkpointEvent(step.id, checkpoint.id, "reconciliation", evaluation));
+      await this.captureCheckpointEvidence(trace, checkpoint.id, "reconciliation", step.id);
+      if (!evaluation.passed) {
+        trace.push({ kind: "RECOVERY", stepId: step.id, code: "UNKNOWN_COMMIT_STATE", outcome: "AMBIGUOUS", timestamp: now() });
+        return false;
+      }
+    }
+
+    trace.push({ kind: "RECOVERY", stepId: step.id, code: "UNKNOWN_COMMIT_STATE", outcome: "COMMITTED", timestamp: now() });
+    return true;
+  }
+
+  // Plan: Milestone 9 | REQ-EVD-002
+  private async captureCheckpointEvidence(
+    trace: ReplayTraceEvent[],
+    checkpointId: string,
+    phase: string,
+    stepId?: string,
+  ): Promise<void> {
+    try {
+      const evidence = await this.surface.captureEvidence(`${phase}:${checkpointId}`);
+      trace.push({ kind: "EVIDENCE", ...(stepId ? { stepId } : {}), checkpointId, evidence, timestamp: now() });
+    } catch (error) {
+      trace.push({
+        kind: "EVIDENCE_FAILURE",
+        ...(stepId ? { stepId } : {}),
+        code: "EVIDENCE_CAPTURE_FAILED",
+        message: errorMessage(error),
+        timestamp: now(),
+      });
+    }
+  }
+
   private async failureWithEvidence(
     trace: ReplayTraceEvent[],
     disposition: ReplayResult["disposition"],
@@ -290,9 +382,16 @@ export class DeterministicReplayEngine {
     try {
       const evidence = await this.surface.captureEvidence(`${code}: ${message}`);
       trace.push({ kind: "EVIDENCE", ...(stepId ? { stepId } : {}), evidence, timestamp: now() });
-    } catch {
-      // Evidence capture failure must not hide the primary replay result. Milestone 9 will add an
-      // explicit secondary evidence-failure event/result once evidence persistence is implemented.
+    } catch (error) {
+      // Plan: Milestone 9 | REQ-EVD-002
+      // Evidence failure is secondary and explicit. It never hides the primary execution outcome.
+      trace.push({
+        kind: "EVIDENCE_FAILURE",
+        ...(stepId ? { stepId } : {}),
+        code: "EVIDENCE_CAPTURE_FAILED",
+        message: errorMessage(error),
+        timestamp: now(),
+      });
     }
 
     return { disposition, code, message, ...(stepId ? { stepId } : {}), trace };
@@ -336,7 +435,7 @@ function resolveValue(step: CapabilityStep, context: ExecutionContext): JsonValu
 function checkpointEvent(
   stepId: string | undefined,
   checkpointId: string,
-  phase: "precondition" | "postcondition" | "business_outcome" | "success",
+  phase: "precondition" | "postcondition" | "business_outcome" | "success" | "reconciliation",
   evaluation: Awaited<ReturnType<typeof evaluateCheckpoint>>,
 ): ReplayTraceEvent {
   return {

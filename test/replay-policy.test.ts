@@ -216,7 +216,10 @@ describe("DeterministicReplayEngine + ConfigurablePolicyEvaluator", () => {
     expect(result.disposition).toBe("FAILURE");
     expect(result.code).toBe("PRECONDITION_FAILED");
     expect(surface.actions).toHaveLength(0);
-    expect(surface.evidence).toHaveLength(1);
+    // Milestone 9 | REQ-EVD-002
+    // A failed precondition captures both checkpoint evidence and terminal
+    // failure evidence so the expected state and failure context are preserved.
+    expect(surface.evidence).toHaveLength(2);
   });
 
   // Milestone 8 behavior implemented at the replay seam | REQ-OUT-002
