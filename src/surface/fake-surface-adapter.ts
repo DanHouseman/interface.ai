@@ -18,6 +18,7 @@ export class FakeSurfaceAdapter implements SurfaceAdapter {
   private state: SessionState = "active";
   private owner: SessionOwner = "automation";
   private actionResults: ActionResult[] = [];
+  private evidenceFailure: Error | undefined;
   private observation: Observation = {
     surfaceKind: "browser",
     timestamp: new Date().toISOString(),
@@ -44,6 +45,16 @@ export class FakeSurfaceAdapter implements SurfaceAdapter {
   // Scripted results allow deterministic retry/failure/ambiguous-commit scenarios.
   public queueActionResult(result: ActionResult): void {
     this.actionResults.push(result);
+  }
+
+  // Plan: Milestone 8 tests | REQ-OUT-005
+  public setSessionState(state: SessionState): void {
+    this.state = state;
+  }
+
+  // Plan: Milestone 9 tests | REQ-EVD-002
+  public failEvidenceCapture(error: Error = new Error("Evidence capture failed.")): void {
+    this.evidenceFailure = error;
   }
 
   public async observe(): Promise<Observation> {
@@ -81,6 +92,7 @@ export class FakeSurfaceAdapter implements SurfaceAdapter {
   }
 
   public async captureEvidence(reason: string): Promise<EvidenceReference> {
+    if (this.evidenceFailure) throw this.evidenceFailure;
     const evidence: EvidenceReference = {
       id: `fake-evidence-${this.evidence.length}`,
       kind: "observation",
