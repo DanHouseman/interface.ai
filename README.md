@@ -1,7 +1,33 @@
 # Implementation Progress
+## 09/16/2026 Completed
 
-```But first reorganize this Readme```
+### Milestone 10: Real Browser Surface
 
+### Requirements
+
+-   `REQ-SRF-001/002`
+-   `REQ-RPL-002...004`
+-   `REQ-EVD-002`
+
+### Tests
+
+-   `test/playwright-surface-adapter.test.ts`
+-   Browser integration coverage for deterministic replay against a real
+    surface.
+
+### Completed
+
+-   Added the first real `SurfaceAdapter` implementation using
+    Playwright.
+-   Added browser observation, target resolution, actions, session state,
+    and evidence capture.
+-   Moved ordered target fallback execution into deterministic replay so
+    the artifact, rather than the browser adapter, determines locator
+    priority.
+-   Added trace visibility for individual target resolution attempts.
+-   Existing replay, policy, outcome, and evidence contracts now execute
+    against both the deterministic fake and a real browser surface.
+    
 ## 09/15/2026 Completed
 
 ### Requirements
@@ -86,8 +112,12 @@ integration:
 7.  Structured execution evidence with checkpoint capture, failure
     capture, persistence, and redaction.
 
-The implementation does **not** yet include the real Playwright browser
-adapter or LLM driven discovery.
+The deterministic execution architecture now operates against both a
+test surface and a real Playwright browser surface.
+
+The implementation does **not** yet include the genuine LLM driven
+discovery loop or compilation of a successful discovery run into a
+reusable capability.
 
 # Run
 
@@ -255,14 +285,53 @@ not part of this implementation slice.
 
 # Next Implementation
 
-1.  Implement the minimal real browser `SurfaceAdapter`.
-2.  Run the genuine LLM driven discovery spike against a live surface.
-3.  Compile the successful discovery run into a reusable capability
-    artifact.
-4.  Replay that artifact deterministically without an LLM.
-5.  Persist the discovery and replay evidence under `/evidence/`.
-6.  Implement the real same session HITL path against the browser
+1.  Run the genuine LLM driven discovery loop against the real browser
     surface.
+2.  Preserve the successful discovery trace.
+3.  Compile that trace into the existing capability artifact format.
+4.  Validate and persist the generated capability.
+5.  Replay the generated capability without an LLM.
+6.  Preserve discovery, artifact, and replay evidence under `/evidence/`.
+7.  Complete the real same session HITL path.
+
+# Planned Milestones
+
+## Milestone 10: Real Browser Surface
+
+-   Implement the minimal Playwright backed `SurfaceAdapter`.
+-   Add real browser observation, target resolution, actions, session
+    state, and evidence capture.
+-   Move ordered target strategy fallback into deterministic replay so
+    the artifact controls locator priority and each attempt can be
+    traced.
+-   Add browser integration coverage against a controlled live surface.
+
+Primary requirements: `REQ-SRF-001/002`, `REQ-RPL-002...004`,
+`REQ-EVD-002`.
+
+## Milestone 11: Genuine LLM Discovery
+
+-   Implement the bounded observe, decide, act discovery loop.
+-   Keep model proposed actions constrained by external policy.
+-   Record model decisions, reasons, policy results, actions, and
+    resulting observations.
+-   Run at least one genuine discovery against the real browser surface.
+
+## Milestone 12: Discovery to Capability Compilation
+
+-   Compile a successful discovery trace into the existing validated
+    capability artifact.
+-   Persist the generated artifact for review.
+-   Replay the generated capability without an LLM.
+-   Preserve discovery, artifact, and replay evidence under `/evidence/`.
+
+## Milestone 13: Real Same Session HITL
+
+-   Add explicit automation to human ownership transfer.
+-   Preserve the same live browser session during intervention.
+-   Record intervention context and human actions.
+-   Reobserve and verify state before returning ownership to automation.
+
 
 # Architecture Tradeoffs and Decisions
 
@@ -276,6 +345,8 @@ simplistic**. Discovery gets to reason. Replay gets to execute what was
 learned. If replay starts making open ended decisions, then I have
 effectively moved discovery back into production and broken the primary
 boundary.
+
+Bumped Node to 24 because I don't think an app that is supposed to interface with banking software should have known vulnerabilities... even if they aren't "critical."
 
 ## 1. Policy Execution vs. Policy Decision
 

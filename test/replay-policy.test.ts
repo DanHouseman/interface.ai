@@ -160,6 +160,8 @@ describe("DeterministicReplayEngine + ConfigurablePolicyEvaluator", () => {
     expect(result.disposition).toBe("FAILURE");
     expect(result.code).toBe("POLICY_DENIED");
     expect(surface.actions).toHaveLength(0);
+    // Policy denial occurs before checkpoint execution, so only terminal
+    // failure evidence is captured.
     expect(surface.evidence).toHaveLength(1);
   });
 
@@ -217,8 +219,7 @@ describe("DeterministicReplayEngine + ConfigurablePolicyEvaluator", () => {
     expect(result.code).toBe("PRECONDITION_FAILED");
     expect(surface.actions).toHaveLength(0);
     // Milestone 9 | REQ-EVD-002
-    // A failed precondition captures both checkpoint evidence and terminal
-    // failure evidence so the expected state and failure context are preserved.
+    // Failed checkpoint + terminal failure each preserve evidence.
     expect(surface.evidence).toHaveLength(2);
   });
 

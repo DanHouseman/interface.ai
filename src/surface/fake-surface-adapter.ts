@@ -92,7 +92,10 @@ export class FakeSurfaceAdapter implements SurfaceAdapter {
   }
 
   public async captureEvidence(reason: string): Promise<EvidenceReference> {
-    if (this.evidenceFailure) throw this.evidenceFailure;
+    if (this.evidenceFailure) {
+      throw this.evidenceFailure;
+    }
+
     const evidence: EvidenceReference = {
       id: `fake-evidence-${this.evidence.length}`,
       kind: "observation",
