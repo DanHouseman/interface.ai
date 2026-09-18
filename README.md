@@ -803,3 +803,16 @@ Do not infer a business failure from an exception.
 Do not infer execution truth from whether evidence persistence worked.
 
 Make each boundary establish the thing it actually owns.
+
+## Test and coverage discipline
+
+All authored tests live under `test/` as TypeScript (`*.test.ts`).  `dist/` is build output only and is cleaned before each build, so compiled JavaScript tests are not retained or rediscovered by Vitest.  Coverage uses V8 across executable production modules with 100% statement, branch, function, and line thresholds.  Type-only contract/barrel modules are excluded because they emit no executable behavior.
+
+```bash
+npm install
+npx playwright install chromium
+npm run typecheck
+npm test
+npm run coverage
+npm run build
+```

@@ -6,7 +6,7 @@ import { PlaywrightSurfaceAdapter } from "../src/surface/playwright-surface-adap
 // Plan: Milestone 10 | REQ-SRF-001/002, REQ-RPL-002, REQ-EVD-002
 // Integration coverage proves the same SurfaceAdapter contract against a real browser.
 describe("PlaywrightSurfaceAdapter", () => {
-  let browser: Browser;
+  let browser: Browser | undefined;
   let page: Page;
   let surface: PlaywrightSurfaceAdapter;
 
@@ -17,7 +17,7 @@ describe("PlaywrightSurfaceAdapter", () => {
   });
 
   afterAll(async () => {
-    await browser.close();
+    await browser?.close();
   });
 
   it("observes and acts on a live browser surface", async () => {
@@ -72,4 +72,68 @@ describe("PlaywrightSurfaceAdapter", () => {
     expect(await surface.getSessionOwner()).toBe("automation");
     expect(await surface.getSessionState()).toBe("active");
   });
+
+  it("supports selector, attribute, structural, visual, select, read, wait, submit, and navigation mechanics", async () => {
+    await page.setContent(`
+      <form id="form" onsubmit="event.preventDefault(); document.querySelector('#submitted').textContent='submitted'">
+        <div id="descendant-box">Descendant<input class="descendant-child" /></div>\n        <section id="ancestor-box"><span>Inside</span><input class="ancestor-child" /></section>
+        <label>Plan<select id="plan"><option value="a">A</option><option value="b">B</option></select></label>
+        <button id="submit" data-purpose="commit" type="submit">Commit</button>
+        <div id="submitted"></div><div id="before">Before</div><span>Anchor</span><input id="after" value="read-me" />
+      </form>
+    `);
+    const selector = await surface.resolve({ id:"plan",description:"plan",strategies:[{kind:"selector",selector:"#plan"}],requireUniqueMatch:true });
+    expect((await surface.execute({type:"select",target:selector,value:"b"})).ok).toBe(true);
+    expect(await page.locator("#plan").inputValue()).toBe("b");
+
+    const attribute = await surface.resolve({ id:"commit",description:"commit",strategies:[{kind:"attribute",name:"data-purpose",value:"commit"}],requireUniqueMatch:true });
+    expect((await surface.execute({type:"submit",target:attribute})).ok).toBe(true);
+    expect(await page.locator("#submitted").innerText()).toBe("submitted");
+
+    for (const [id, relation, anchorText, controlHint] of [
+      ["desc","descendant","Descendant","input"], ["following","following","Anchor",undefined], ["preceding","preceding","Anchor",undefined], ["ancestor","ancestor","Inside","input"]
+    ] as const) {
+      const resolved = await surface.resolve({ id,description:id,strategies:[{kind:"structural",anchorText,relation,...(controlHint?{controlHint}: {})}],requireUniqueMatch:false });
+      expect(resolved.strategy.kind).toBe("structural");
+    }
+
+    const readTarget = await surface.resolve({id:"read",description:"read",strategies:[{kind:"selector",selector:"#after"}],requireUniqueMatch:true});
+    expect((await surface.execute({type:"read",target:readTarget})).observedValue).toBe("");
+    expect((await surface.execute({type:"wait",durationMs:1})).ok).toBe(true);
+
+    const visual = await surface.resolve({id:"xy",description:"xy",strategies:[{kind:"visual",description:"point",x:1,y:1}],requireUniqueMatch:true});
+    expect((await surface.execute({type:"click",target:visual})).ok).toBe(true);
+    const invalidCoordinateAction = await surface.execute({type:"type",target:visual,value:"x"});
+    expect(invalidCoordinateAction.ok).toBe(false);
+    expect(invalidCoordinateAction.error?.code).toBe("BROWSER_ACTION_FAILED");
+
+    const custom = await surface.execute({type:"custom",name:"unsupported"});
+    expect(custom).toMatchObject({ok:false,error:{code:"CUSTOM_ACTION_UNSUPPORTED",recoverable:false}});
+
+    await surface.execute({type:"navigate",value:"data:text/html,<title>Navigated</title><body>done</body>"});
+    expect((await surface.observe()).title).toBe("Navigated");
+  });
+
+  it("rejects unresolved, ambiguous, unsupported, and incomplete targets", async () => {
+    await page.setContent(`<button>Duplicate</button><button>Duplicate</button>`);
+    await expect(surface.resolve({id:"none",description:"none",strategies:[{kind:"selector",selector:"#missing"}],requireUniqueMatch:true})).rejects.toThrow("no matches");
+    await expect(surface.resolve({id:"many",description:"many",strategies:[{kind:"accessibility",role:"button",name:"Duplicate",exact:true}],requireUniqueMatch:true})).rejects.toThrow("expected one match, found 2");
+    await expect(surface.resolve({id:"visual",description:"visual",strategies:[{kind:"visual",description:"missing coordinate"}],requireUniqueMatch:true})).rejects.toThrow("requires deterministic x/y");
+    await expect(surface.resolve({id:"terminal",description:"terminal",strategies:[{kind:"terminal_field",fieldName:"X"}],requireUniqueMatch:true})).rejects.toThrow("not supported");
+  });
+
+  it("reports expired state and guards closed-session operations", async () => {
+    const closedPage = await browser!.newPage();
+    const closedSurface = new PlaywrightSurfaceAdapter(closedPage, { evidenceDirectory:"evidence/test-browser" });
+    await closedPage.close();
+    expect(await closedSurface.getSessionState()).toBe("expired");
+    expect((await closedSurface.observe()).signals.session).toBe("expired");
+    await closedSurface.pause();
+    expect(await closedSurface.getSessionOwner()).toBe("none");
+    await expect(closedSurface.resume()).rejects.toThrow("closed browser session");
+    await expect(closedSurface.captureEvidence("closed")).rejects.toThrow("page has closed");
+    const action = await closedSurface.execute({type:"wait",durationMs:0});
+    expect(action.error?.code).toBe("SURFACE_NOT_OWNED_BY_AUTOMATION");
+  });
+
 });
