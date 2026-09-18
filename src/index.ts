@@ -11,3 +11,21 @@ export * from "./evidence/redactor.js";
 export * from "./evidence/evidence-store.js";
 
 export * from "./surface/playwright-surface-adapter.js";
+export { DiscoveryEngine } from "./discovery/discovery-engine.js";
+export { CapabilityCompiler } from "./discovery/capability-compiler.js";
+export type {
+  DiscoveryDecision,
+  DiscoveryModel,
+  DiscoveryRequest,
+  DiscoveryResult,
+  DiscoveryTraceEvent,
+} from "./discovery/discovery-contracts.js";
+export {
+  HumanHandoffCoordinator,
+  InMemoryInterventionRouter,
+} from "./hitl/intervention.js";
+export type {
+  HumanActionRecord,
+  InterventionRequest,
+  InterventionRouter,
+} from "./hitl/intervention.js";

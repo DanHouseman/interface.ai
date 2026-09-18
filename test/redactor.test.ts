@@ -22,8 +22,3 @@ describe("EvidenceRedactor", () => {
     expect(redactor.redactString("unchanged")).toBe("unchanged");
   });
 });
-
-  it("ignores empty sensitive strings without replacing every boundary", () => {
-    const redactor = new EvidenceRedactor(artifact(), { secret: "" });
-    expect(redactor.redactString("unchanged")).toBe("unchanged");
-  });

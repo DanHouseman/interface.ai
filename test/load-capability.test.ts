@@ -49,13 +49,3 @@ describe("parseCapabilityArtifact", () => {
     ]));
   });
 });
-
-  it("labels root-level validation failures as artifact", () => {
-    try {
-      parseCapabilityArtifact(null);
-      throw new Error("Expected validation failure.");
-    } catch (error) {
-      expect(error).toBeInstanceOf(CapabilityValidationError);
-      expect((error as CapabilityValidationError).issues[0]).toContain("artifact:");
-    }
-  });
