@@ -1,33 +1,35 @@
 # Implementation Progress
-## 09/16/2026 Completed
+
+## 09/17/2026 Completed
 
 ### Milestone 10: Real Browser Surface
 
 ### Requirements
 
 -   `REQ-SRF-001/002`
--   `REQ-RPL-002...004`
+-   `REQ-RPL-002/004`
 -   `REQ-EVD-002`
+-   `REQ-HITL-001/002` session ownership seam
 
 ### Tests
 
 -   `test/playwright-surface-adapter.test.ts`
--   Browser integration coverage for deterministic replay against a real
-    surface.
 
 ### Completed
 
--   Added the first real `SurfaceAdapter` implementation using
-    Playwright.
--   Added browser observation, target resolution, actions, session state,
-    and evidence capture.
--   Moved ordered target fallback execution into deterministic replay so
-    the artifact, rather than the browser adapter, determines locator
-    priority.
--   Added trace visibility for individual target resolution attempts.
--   Existing replay, policy, outcome, and evidence contracts now execute
-    against both the deterministic fake and a real browser surface.
-    
+-   Added a real Playwright-backed `SurfaceAdapter`.
+-   Added browser observation, deterministic ordered target fallback, browser actions,
+    session state, and screenshot evidence capture.
+-   Added accessibility, label, attribute, selector, structural, and deterministic
+    coordinate target strategies for browser replay.
+-   Unsupported terminal strategies fail explicitly rather than being guessed.
+-   Added same-session pause/resume ownership behavior to the real browser adapter.
+-   Added real Chromium integration coverage against a controlled synthetic surface.
+-   Added explicit Vitest discovery configuration so compiled tests under `dist/` are
+    never executed a second time.
+-   CI installs the Playwright Chromium runtime before executing integration tests.
+
+
 ## 09/15/2026 Completed
 
 ### Requirements
@@ -112,12 +114,11 @@ integration:
 7.  Structured execution evidence with checkpoint capture, failure
     capture, persistence, and redaction.
 
-The deterministic execution architecture now operates against both a
-test surface and a real Playwright browser surface.
+The deterministic execution architecture now operates against both the fake test
+surface and a real Playwright browser surface.
 
-The implementation does **not** yet include the genuine LLM driven
-discovery loop or compilation of a successful discovery run into a
-reusable capability.
+The implementation does **not** yet include the genuine LLM driven discovery loop
+or compilation of a successful discovery run into a reusable capability.
 
 # Run
 
@@ -285,14 +286,14 @@ not part of this implementation slice.
 
 # Next Implementation
 
-1.  Run the genuine LLM driven discovery loop against the real browser
+1.  Implement the minimal real browser `SurfaceAdapter`.
+2.  Run the genuine LLM driven discovery spike against a live surface.
+3.  Compile the successful discovery run into a reusable capability
+    artifact.
+4.  Replay that artifact deterministically without an LLM.
+5.  Persist the discovery and replay evidence under `/evidence/`.
+6.  Implement the real same session HITL path against the browser
     surface.
-2.  Preserve the successful discovery trace.
-3.  Compile that trace into the existing capability artifact format.
-4.  Validate and persist the generated capability.
-5.  Replay the generated capability without an LLM.
-6.  Preserve discovery, artifact, and replay evidence under `/evidence/`.
-7.  Complete the real same session HITL path.
 
 # Planned Milestones
 
@@ -345,8 +346,6 @@ simplistic**. Discovery gets to reason. Replay gets to execute what was
 learned. If replay starts making open ended decisions, then I have
 effectively moved discovery back into production and broken the primary
 boundary.
-
-Bumped Node to 24 because I don't think an app that is supposed to interface with banking software should have known vulnerabilities... even if they aren't "critical."
 
 ## 1. Policy Execution vs. Policy Decision
 

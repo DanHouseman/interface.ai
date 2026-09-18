@@ -160,8 +160,8 @@ describe("DeterministicReplayEngine + ConfigurablePolicyEvaluator", () => {
     expect(result.disposition).toBe("FAILURE");
     expect(result.code).toBe("POLICY_DENIED");
     expect(surface.actions).toHaveLength(0);
-    // Policy denial occurs before checkpoint execution, so only terminal
-    // failure evidence is captured.
+    // Milestone 9 | REQ-EVD-002
+    // Policy denial preserves terminal failure evidence.
     expect(surface.evidence).toHaveLength(1);
   });
 

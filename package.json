@@ -15,9 +15,13 @@
   "devDependencies": {
     "@types/node": "^24.3.0",
     "typescript": "^5.9.2",
-    "vitest": "^5.0.1"
+    "vitest": "^5.0.1",
+    "playwright": "1.63.0"
   },
   "engines": {
     "node": ">=24.21.0 <25"
+  },
+  "allowScripts": {
+    "fsevents@2.3.3": true
   }
 }

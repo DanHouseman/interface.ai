@@ -9,3 +9,5 @@ export * from "./replay/checkpoint-evaluator.js";
 export * from "./replay/replay-engine.js";
 export * from "./evidence/redactor.js";
 export * from "./evidence/evidence-store.js";
+
+export * from "./surface/playwright-surface-adapter.js";
