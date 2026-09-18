@@ -62,3 +62,43 @@ describe("policy edge cases", () => {
     expect(d.disposition).toBe("ALLOW");
   });
 });
+
+describe("remaining checkpoint and policy branches", () => {
+  it("records declared targets that fail resolution", async () => {
+    const a = artifact();
+    const surface = new FakeSurfaceAdapter(new Set(["different-target"]));
+    const result = await evaluateCheckpoint(a, {
+      id: "missing-target",
+      description: "missing target",
+      all: [{ kind: "target_present", targetId: "present" }],
+    }, surface);
+    expect(result.passed).toBe(false);
+    expect(result.observed[0]).toContain("target:present:unresolved:Target not found: present");
+  });
+
+  it("stringifies non-Error target resolution failures", async () => {
+    const a = artifact();
+    const surface = new FakeSurfaceAdapter(new Set(["present"]));
+    surface.resolve = async () => { throw "non-error-resolution-failure"; };
+    const result = await evaluateCheckpoint(a, {
+      id: "non-error",
+      description: "non error",
+      all: [{ kind: "target_present", targetId: "present" }],
+    }, surface);
+    expect(result.passed).toBe(false);
+    expect(result.observed[0]).toContain("non-error-resolution-failure");
+  });
+
+  it("uses the origin fallback for non-hierarchical URL schemes", () => {
+    const a = artifact();
+    a.policy.permittedTargets = ["null"];
+    a.policy.permittedRoutes = [];
+    const decision = new ConfigurablePolicyEvaluator().evaluate({
+      artifact: a,
+      step: a.steps[0]!,
+      context,
+      observation: { surfaceKind: "browser", timestamp: "x", location: "foo:bar", signals: {} },
+    });
+    expect(decision.disposition).toBe("ALLOW");
+  });
+});

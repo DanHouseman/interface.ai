@@ -136,4 +136,51 @@ describe("PlaywrightSurfaceAdapter", () => {
     expect(action.error?.code).toBe("SURFACE_NOT_OWNED_BY_AUTOMATION");
   });
 
+
+  it("covers form submission, non-HTML submit rejection, escaping, and default structural hints", async () => {
+    await page.setContent(`
+      <form id="direct-form" onsubmit="event.preventDefault(); this.dataset.submitted='yes'">
+        <button type="submit">Submit form</button>
+      </form>
+      <div data-complex='a\\b"c'>Escaped attribute</div>
+      <div>DefaultHint<input id="default-hint" /></div>
+      <svg id="svg-submit" xmlns="http://www.w3.org/2000/svg"><circle cx="5" cy="5" r="2" /></svg>
+    `);
+
+    const form = await surface.resolve({
+      id: "form",
+      description: "form",
+      strategies: [{ kind: "selector", selector: "#direct-form" }],
+      requireUniqueMatch: true,
+    });
+    expect((await surface.execute({ type: "submit", target: form })).ok).toBe(true);
+    expect(await page.locator("#direct-form").getAttribute("data-submitted")).toBe("yes");
+
+    const defaultHint = await surface.resolve({
+      id: "default-hint",
+      description: "default structural hint",
+      strategies: [{ kind: "structural", anchorText: "DefaultHint", relation: "descendant" }],
+      requireUniqueMatch: true,
+    });
+    expect(defaultHint.strategy.kind).toBe("structural");
+
+    const escaped = await surface.resolve({
+      id: "escaped",
+      description: "escaped attribute",
+      strategies: [{ kind: "attribute", name: "data-complex", value: 'a\\b"c' }],
+      requireUniqueMatch: true,
+    });
+    expect(escaped.strategy.kind).toBe("attribute");
+
+    const svg = await surface.resolve({
+      id: "svg",
+      description: "svg",
+      strategies: [{ kind: "selector", selector: "#svg-submit" }],
+      requireUniqueMatch: true,
+    });
+    const submit = await surface.execute({ type: "submit", target: svg });
+    expect(submit).toMatchObject({ ok: false, error: { code: "BROWSER_ACTION_FAILED", recoverable: true } });
+    expect(submit.error?.message).toContain("not an HTML element");
+  });
+
 });

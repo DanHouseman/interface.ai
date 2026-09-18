@@ -78,3 +78,36 @@ describe("replay invocation and action edge cases", () => {
     const {result}=await replay(a); expect(result.outputs).toEqual({signal:"$123.45"});
   });
 });
+
+describe("remaining replay defensive branches", () => {
+  it("records evidence failure while preserving a primary replay failure", async () => {
+    const a = artifact();
+    const s = new FakeSurfaceAdapter();
+    s.setSessionState("paused");
+    s.failEvidenceCapture(new Error("secondary evidence failure"));
+    const { result } = await replay(a, context(), s);
+    expect(result.code).toBe("SESSION_NOT_ACTIVE");
+    expect(result.trace).toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: "EVIDENCE_FAILURE", code: "EVIDENCE_CAPTURE_FAILED", message: "secondary evidence failure" }),
+    ]));
+  });
+
+  it("stringifies non-Error evidence failures", async () => {
+    const a = artifact();
+    const s = new FakeSurfaceAdapter();
+    s.setSessionState("paused");
+    s.captureEvidence = async () => { throw "non-error-evidence-failure"; };
+    const { result } = await replay(a, context(), s);
+    expect(result.trace).toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: "EVIDENCE_FAILURE", message: "non-error-evidence-failure" }),
+    ]));
+  });
+
+  it("defensively returns ACTION_NOT_EXECUTED when a malformed retry contract permits zero executions", async () => {
+    const a = artifact();
+    a.steps[0]!.recovery.retry.allowed = true;
+    a.steps[0]!.recovery.retry.maxAttempts = -2;
+    const { result } = await replay(a);
+    expect(result).toMatchObject({ disposition: "FAILURE", code: "ACTION_NOT_EXECUTED" });
+  });
+});
