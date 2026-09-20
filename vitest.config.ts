@@ -8,7 +8,7 @@ export default defineConfig({
       provider: "v8",
       include: ["src/**/*.ts"],
       exclude: ["src/index.ts", "src/domain/contracts.ts", "src/replay/replay-contracts.ts", "src/surface/surface-adapter.ts"],
-      reporter: ["text", "json-summary", "html"],
+      reporter: ["text", "json-summary", "json", "html"],
       thresholds: {
         statements: 100,
         branches: 100,

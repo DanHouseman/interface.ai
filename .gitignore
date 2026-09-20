@@ -4,3 +4,7 @@ dist/
 coverage/
 artifacts/runtime/
 evidence/runtime/
+
+.env.*
+!.env.example
+evidence/runs/

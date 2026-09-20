@@ -3,6 +3,7 @@ import type { EvidenceReference } from "../surface/surface-adapter.js";
 
 // Plan: Milestone 6 + Milestone 9 | REQ-RPL-001/003, REQ-EVD-001/002
 export type ReplayTraceEvent =
+  | { readonly kind: "HANDOFF"; readonly stepId: string; readonly decision: "retry" | "complete"; readonly timestamp: string }
   | { readonly kind: "STEP_STARTED"; readonly stepId: string; readonly timestamp: string }
   | { readonly kind: "STEP_COMPLETED"; readonly stepId: string; readonly timestamp: string }
   | { readonly kind: "CHECKPOINT"; readonly stepId?: string; readonly checkpointId: string; readonly phase: "precondition" | "postcondition" | "business_outcome" | "success" | "reconciliation"; readonly passed: boolean; readonly expected: readonly string[]; readonly observed: readonly string[]; readonly timestamp: string }

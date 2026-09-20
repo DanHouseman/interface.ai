@@ -1,5 +1,54 @@
 # Implementation Progress
 
+## 09/19/2026 Completed
+
+### Milestone 14: Discovery and HITL Integration Hardening
+
+### Requirements
+
+-   `REQ-DISC-001...004`
+-   `REQ-ART-001...004`
+-   `REQ-RPL-001...004`
+-   `REQ-HITL-001...003`
+-   `REQ-EVD-001/002`
+-   `REQ-POL-000...003`
+
+### Tests
+
+-   `test/discovery-handoff.test.ts`
+-   Discovery vertical slice coverage for deterministic capability compilation and authority
+    boundary enforcement.
+-   Same session HITL coverage for ceding and reacquiring the existing adapter session.
+-   Corrected discovery test fixtures to satisfy the current typed `DiscoveryRequest` input
+    contract, including the required `memberId` input used by the discovery specification.
+
+### Completed
+
+-   Integrated the discovery, capability compilation, and human handoff foundations into the
+    current typed test surface rather than leaving them as isolated architectural seams.
+-   Corrected the discovery vertical slice so `DiscoveryEngine` is instantiated through the
+    current implementation contract and exercised as a real constructor in the test path.
+-   Aligned discovery request fixtures with the current capability specification input contract,
+    including the required `memberId` value.
+-   Verified successful discovery can produce a deterministic capability suitable for the
+    existing replay architecture.
+-   Verified discovery is blocked when the observed surface leaves the authorized authority
+    boundary.
+-   Verified automation can cede and reacquire the same adapter session through the HITL
+    coordinator without replacing the underlying surface session.
+-   Preserved the architectural boundary that discovery may reason with a model while compiled
+    capability replay remains deterministic and model independent.
+
+### Remaining Integration Work
+
+-   Connect a real model provider to `DiscoveryModel`.
+-   Execute and persist a genuine LLM driven discovery run against the Playwright browser
+    surface.
+-   Persist the generated capability and discovery evidence under `/evidence/`.
+-   Replay the generated capability without an LLM and persist replay evidence.
+-   Exercise the HITL coordinator against the live Playwright browser session and persist the
+    intervention evidence.
+
 ## 09/18/2026 Completed
 
 ### Milestone 11: Genuine LLM Discovery Foundation

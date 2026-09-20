@@ -6,7 +6,7 @@ function artifact() {
   return capabilityArtifactSchema.parse({
     schemaVersion:"1.0", capability:{id:"x",name:"x",version:"1",description:"x"}, application:{family:"x",surface:"browser",compatibilityTags:[]}, provenance:{discoveryRunId:"r",createdAt:"2026-09-17T00:00:00.000Z",compilerVersion:"1"},
     contract:{inputs:[{name:"secret",type:"string",required:true,sensitive:true,description:"secret"},{name:"public",type:"string",required:false,sensitive:false,description:"public"}],outputs:[],businessOutcomes:[]},
-    policy:{permittedTargets:["https://x.invalid"],permittedRoutes:[],permittedActionTypes:["wait"]}, targets:[], steps:[{id:"s",description:"s",action:{type:"wait",effect:"read"},preconditions:[],postconditions:[],recovery:{retry:{allowed:false,maxAttempts:0,backoffMs:0},onFailure:"fail",reconciliationRequiredAfterAmbiguousCommit:false},humanApprovalRequired:false}], successCheckpoint:{id:"ok",description:"ok",all:[{kind:"session_state",state:"active"}]}
+    policy:{permittedTargets:["https://x.invalid"],permittedRoutes:[],permittedActionTypes:["wait"]}, targets:[], steps:[{id:"s",description:"s",action:{type:"wait",effect:"read",value:{kind:"literal",value:0}},preconditions:[],postconditions:[],recovery:{retry:{allowed:false,maxAttempts:0,backoffMs:0},onFailure:"fail",reconciliationRequiredAfterAmbiguousCommit:false},humanApprovalRequired:false}], successCheckpoint:{id:"ok",description:"ok",all:[{kind:"session_state",state:"active"}]}
   });
 }
 

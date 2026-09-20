@@ -29,3 +29,7 @@ export type {
   InterventionRequest,
   InterventionRouter,
 } from "./hitl/intervention.js";
+
+export { OpenAIDiscoveryModel } from "./discovery/openai-discovery-model.js";
+export { discoveryDecisionSchema } from "./discovery/discovery-contracts.js";
+export type { DiscoverySpecification, ModelInput } from "./discovery/discovery-contracts.js";

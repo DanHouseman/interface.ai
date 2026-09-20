@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   validate:
-    name: Typecheck, Test, Build
+    name: Typecheck, Coverage, Build
     runs-on: ubuntu-latest
 
     steps:
@@ -37,8 +37,8 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Test
-        run: npm test
+      - name: Offline tests and 100% coverage
+        run: npm run coverage
 
       - name: Build
         run: npm run build

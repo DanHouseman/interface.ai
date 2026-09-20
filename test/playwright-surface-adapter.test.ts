@@ -13,7 +13,7 @@ describe("PlaywrightSurfaceAdapter", () => {
   beforeAll(async () => {
     browser = await chromium.launch({ headless: true });
     page = await browser.newPage();
-    surface = new PlaywrightSurfaceAdapter(page, { evidenceDirectory: "evidence/test-browser" });
+    surface = new PlaywrightSurfaceAdapter(page, { evidenceDirectory: "evidence/runtime/test-browser" });
   });
 
   afterAll(async () => {
@@ -61,7 +61,7 @@ describe("PlaywrightSurfaceAdapter", () => {
 
   it("captures browser evidence and preserves same-session ownership state", async () => {
     const evidence = await surface.captureEvidence("milestone-10-checkpoint");
-    expect(evidence.kind).toBe("screenshot");
+    expect(evidence.kind).toBe("snapshot");
     expect(evidence.path).toContain("browser-evidence-");
 
     await surface.pause();
@@ -98,7 +98,7 @@ describe("PlaywrightSurfaceAdapter", () => {
     }
 
     const readTarget = await surface.resolve({id:"read",description:"read",strategies:[{kind:"selector",selector:"#after"}],requireUniqueMatch:true});
-    expect((await surface.execute({type:"read",target:readTarget})).observedValue).toBe("");
+    expect((await surface.execute({type:"read",target:readTarget})).observedValue).toBe("read-me");
     expect((await surface.execute({type:"wait",durationMs:1})).ok).toBe(true);
 
     const visual = await surface.resolve({id:"xy",description:"xy",strategies:[{kind:"visual",description:"point",x:1,y:1}],requireUniqueMatch:true});
@@ -116,7 +116,7 @@ describe("PlaywrightSurfaceAdapter", () => {
 
   it("rejects unresolved, ambiguous, unsupported, and incomplete targets", async () => {
     await page.setContent(`<button>Duplicate</button><button>Duplicate</button>`);
-    await expect(surface.resolve({id:"none",description:"none",strategies:[{kind:"selector",selector:"#missing"}],requireUniqueMatch:true})).rejects.toThrow("no matches");
+    await expect(surface.resolve({id:"none",description:"none",strategies:[{kind:"selector",selector:"#missing"}],requireUniqueMatch:true})).rejects.toThrow("Timeout");
     await expect(surface.resolve({id:"many",description:"many",strategies:[{kind:"accessibility",role:"button",name:"Duplicate",exact:true}],requireUniqueMatch:true})).rejects.toThrow("expected one match, found 2");
     await expect(surface.resolve({id:"visual",description:"visual",strategies:[{kind:"visual",description:"missing coordinate"}],requireUniqueMatch:true})).rejects.toThrow("requires deterministic x/y");
     await expect(surface.resolve({id:"terminal",description:"terminal",strategies:[{kind:"terminal_field",fieldName:"X"}],requireUniqueMatch:true})).rejects.toThrow("not supported");
@@ -124,7 +124,7 @@ describe("PlaywrightSurfaceAdapter", () => {
 
   it("reports expired state and guards closed-session operations", async () => {
     const closedPage = await browser!.newPage();
-    const closedSurface = new PlaywrightSurfaceAdapter(closedPage, { evidenceDirectory:"evidence/test-browser" });
+    const closedSurface = new PlaywrightSurfaceAdapter(closedPage, { evidenceDirectory:"evidence/runtime/test-browser" });
     await closedPage.close();
     expect(await closedSurface.getSessionState()).toBe("expired");
     expect((await closedSurface.observe()).signals.session).toBe("expired");

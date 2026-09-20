@@ -18,7 +18,7 @@ export class JsonFileEvidenceStore implements EvidenceStore {
   public constructor(private readonly directory: string = "evidence/runtime") {}
 
   public async persist(artifact: CapabilityArtifact, context: ExecutionContext, result: ReplayResult): Promise<string> {
-    const redactor = new EvidenceRedactor(artifact, context.inputs);
+    const redactor = new EvidenceRedactor(artifact, context.inputs, result.outputs);
     const payload: JsonValue = {
       schemaVersion: "1.0",
       capability: { id: artifact.capability.id, version: artifact.capability.version },

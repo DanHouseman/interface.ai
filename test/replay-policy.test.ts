@@ -215,7 +215,7 @@ describe("DeterministicReplayEngine + ConfigurablePolicyEvaluator", () => {
 
     const result = await engine.replay(candidate, context());
 
-    expect(result.disposition).toBe("FAILURE");
+    expect(result.disposition).toBe("INTERVENTION_REQUIRED");
     expect(result.code).toBe("PRECONDITION_FAILED");
     expect(surface.actions).toHaveLength(0);
     // Milestone 9 | REQ-EVD-002
@@ -277,7 +277,7 @@ describe("DeterministicReplayEngine + ConfigurablePolicyEvaluator", () => {
     });
     const engine = new DeterministicReplayEngine(surface, new ConfigurablePolicyEvaluator());
 
-    const result = await engine.replay(candidate, context());
+    const result = await engine.replay(candidate, context({ authorization: { approvedStepIds: ["search"] } }));
 
     expect(result.disposition).toBe("INTERVENTION_REQUIRED");
     expect(result.code).toBe("UNKNOWN_COMMIT_STATE");

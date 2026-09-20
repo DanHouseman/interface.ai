@@ -6,7 +6,7 @@ import type { JsonValue } from "../domain/contracts.js";
 // domain/contracts so the artifact remains independent of Playwright/model SDK types.
 const identifier = z.string().min(1).max(200);
 const jsonPrimitive = z.union([z.string(), z.number(), z.boolean(), z.null()]);
-const jsonValue: z.ZodType<JsonValue> = z.lazy(() =>
+export const jsonValue: z.ZodType<JsonValue> = z.lazy(() =>
   z.union([jsonPrimitive, z.array(jsonValue), z.record(z.string(), jsonValue)]),
 );
 
@@ -95,6 +95,7 @@ export const checkpointPredicateSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("title_matches"), pattern: z.string().min(1) }),
   z.object({ kind: z.literal("text_visible"), text: z.string().min(1) }),
   z.object({ kind: z.literal("target_present"), targetId: identifier }),
+  z.object({ kind: z.literal("target_value_equals_input"), targetId: identifier, input: identifier }),
   z.object({
     kind: z.literal("session_state"),
     state: z.enum(["active", "expired", "paused", "unknown"]),
@@ -110,6 +111,7 @@ export const checkpointSchema = z.object({
   id: identifier,
   description: z.string().min(1),
   all: z.array(checkpointPredicateSchema).min(1),
+  timeoutMs: z.number().int().min(0).max(30000).optional(),
 });
 
 // Plan: Milestone 8 | REQ-OUT-003, REQ-OUT-004
@@ -211,6 +213,42 @@ export const capabilityArtifactSchema = z
     const targetIds = new Set(artifact.targets.map((target) => target.id));
     const inputNames = new Set(artifact.contract.inputs.map((input) => input.name));
 
+    // Milestone 3 | Assignment §3.2 | REQ-ART-003
+    // Validate the whole reference graph before any observation or action occurs.
+    const unique = (values: string[], label: string) => {
+      if (new Set(values).size !== values.length) ctx.addIssue({ code: "custom", message: `Duplicate ${label}` });
+    };
+    unique(artifact.targets.map((x) => x.id), "target IDs");
+    unique(artifact.steps.map((x) => x.id), "step IDs");
+    unique(artifact.contract.inputs.map((x) => x.name), "input names");
+    unique(artifact.contract.outputs.map((x) => x.name), "output names");
+    unique(artifact.contract.businessOutcomes.map((x) => x.code), "outcome codes");
+    const checkpoints = [artifact.successCheckpoint,
+      ...artifact.contract.businessOutcomes.map((x) => x.checkpoint),
+      ...artifact.steps.flatMap((x) => [...x.preconditions, ...x.postconditions])];
+    if ((artifact.contract.outputs.length > 0 || checkpoints.some((checkpoint) => checkpoint.all.some((predicate) => predicate.kind === "target_value_equals_input")))
+      && !artifact.policy.permittedActionTypes.includes("read")) {
+      ctx.addIssue({ code: "custom", message: "Output/checkpoint reads require explicit read authority." });
+    }
+    for (const checkpoint of checkpoints) {
+      for (const predicate of checkpoint.all) {
+        if ("targetId" in predicate && !targetIds.has(predicate.targetId)) {
+          ctx.addIssue({ code: "custom", message: `Unknown checkpoint target: ${predicate.targetId}` });
+        }
+        if ("input" in predicate && !inputNames.has(predicate.input)) {
+          ctx.addIssue({ code: "custom", message: `Unknown checkpoint input: ${predicate.input}` });
+        }
+      }
+    }
+    for (const output of artifact.contract.outputs) {
+      if (Number(Boolean(output.source.targetId)) + Number(Boolean(output.source.adapterSignal)) !== 1) {
+        ctx.addIssue({ code: "custom", message: `Output '${output.name}' requires exactly one source.` });
+      }
+      if (output.source.targetId && !targetIds.has(output.source.targetId)) {
+        ctx.addIssue({ code: "custom", message: `Unknown output target: ${output.source.targetId}` });
+      }
+    }
+
     for (const [index, step] of artifact.steps.entries()) {
       if (step.action.targetId && !targetIds.has(step.action.targetId)) {
         ctx.addIssue({
@@ -228,6 +266,24 @@ export const capabilityArtifactSchema = z
         });
       }
 
+      const { type, targetId, value, customAction } = step.action;
+      if (["click", "type", "select", "read", "submit"].includes(type) && !targetId) {
+        ctx.addIssue({ code: "custom", message: `Action '${type}' requires a target.` });
+      }
+      if (["type", "select", "navigate", "wait"].includes(type) && !value) {
+        ctx.addIssue({ code: "custom", message: `Action '${type}' requires a value.` });
+      }
+      if (type === "custom" && !customAction) {
+        ctx.addIssue({ code: "custom", message: "Custom action requires a name." });
+      }
+      if (value?.kind === "literal") {
+        if (["type", "select", "navigate"].includes(type) && typeof value.value !== "string") {
+          ctx.addIssue({ code: "custom", message: `Action '${type}' requires a string.` });
+        }
+        if (type === "wait" && (typeof value.value !== "number" || value.value < 0 || value.value > 30000)) {
+          ctx.addIssue({ code: "custom", message: "Wait requires a duration between 0 and 30000 ms." });
+        }
+      }
       const requiresConservativeRetry =
         step.action.effect === "irreversible_write" || step.action.effect === "privileged";
 

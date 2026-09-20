@@ -1,6 +1,8 @@
-import { mkdir } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { resolve as resolvePath } from "node:path";
+import { randomUUID } from "node:crypto";
 import type { Locator, Page } from "playwright";
+import { evaluateLocation, type Authority } from "../policy/policy-evaluator.js";
 import type { JsonValue } from "../domain/contracts.js";
 import type { Target, TargetStrategy } from "../artifact/capability-schema.js";
 import type {
@@ -20,6 +22,7 @@ type BrowserHandle =
 
 export interface PlaywrightSurfaceAdapterOptions {
   readonly evidenceDirectory?: string;
+  readonly timeoutMs?: number;
 }
 
 // Plan: Milestone 10 | REQ-SRF-001/002, REQ-RPL-002/004, REQ-EVD-002
@@ -29,12 +32,29 @@ export class PlaywrightSurfaceAdapter implements SurfaceAdapter {
   private owner: SessionOwner = "automation";
   private evidenceSequence = 0;
   private readonly evidenceDirectory: string;
+  private readonly sessionId = randomUUID();
+  private activeAction: Promise<ActionResult> | undefined;
+  private dialogSeen = false;
+  private readonly timeoutMs: number;
 
   public constructor(
     private readonly page: Page,
     options: PlaywrightSurfaceAdapterOptions = {},
   ) {
     this.evidenceDirectory = resolvePath(options.evidenceDirectory ?? "evidence/runtime/browser");
+    this.timeoutMs = options.timeoutMs ?? 1000;
+    this.page.setDefaultTimeout(this.timeoutMs);
+    this.page.on("dialog", async (dialog) => { this.dialogSeen = true; await dialog.dismiss(); });
+  }
+
+  // Milestone 7 | Assignment §3.4 | REQ-POL-000
+  // Install before first navigation: navigation, subresources, popups and redirects share
+  // the context guard. Service workers are blocked by the caller's browser context.
+  public async guard(policy: Authority): Promise<void> {
+    await this.page.context().route("**/*", async (route) => {
+      if (evaluateLocation(route.request().url(), policy)) await route.abort("blockedbyclient");
+      else await route.continue();
+    });
   }
 
   public async observe(): Promise<Observation> {
@@ -61,6 +81,8 @@ export class PlaywrightSurfaceAdapter implements SurfaceAdapter {
       signals: {
         session: this.state,
         owner: this.owner,
+        sessionId: this.sessionId,
+        controls: await this.page.locator("body").ariaSnapshot(),
       },
     };
   }
@@ -81,7 +103,17 @@ export class PlaywrightSurfaceAdapter implements SurfaceAdapter {
     throw new Error(`Target '${target.id}' could not be resolved. ${failures.join(" | ")}`);
   }
 
+  // Milestone 10 | Assignment §3.6 | REQ-HITL-001/002
+  // Claim the action slot synchronously before the first await. Pause closes admission,
+  // drains that slot, then transfers control; no in-flight click overlaps human control.
   public async execute(action: SurfaceAction): Promise<ActionResult> {
+    if (this.activeAction) return failure("ACTION_CONFLICT", "Another action is active.", false);
+    const pending = this.perform(action);
+    this.activeAction = pending;
+    try { return await pending; } finally { this.activeAction = undefined; }
+  }
+
+  private async perform(action: SurfaceAction): Promise<ActionResult> {
     if (this.owner !== "automation" || (await this.getSessionState()) !== "active") {
       return failure(
         "SURFACE_NOT_OWNED_BY_AUTOMATION",
@@ -90,11 +122,12 @@ export class PlaywrightSurfaceAdapter implements SurfaceAdapter {
       );
     }
 
+    this.dialogSeen = false;
     try {
       switch (action.type) {
         case "click":
           await this.clickHandle(asBrowserHandle(action.target));
-          return { ok: true };
+          return this.dialogSeen ? failure("UNEXPECTED_DIALOG", "Unexpected dialog was dismissed; verify state before continuing.", false) : { ok: true };
         case "type": {
           const locator = asLocator(action.target);
           await locator.fill(action.value);
@@ -110,7 +143,7 @@ export class PlaywrightSurfaceAdapter implements SurfaceAdapter {
           return { ok: true };
         case "read": {
           const locator = asLocator(action.target);
-          const value = await locator.innerText();
+          const value = await locator.evaluate((element) => element instanceof HTMLInputElement || element instanceof HTMLSelectElement || element instanceof HTMLTextAreaElement ? element.value : (element as HTMLElement).innerText);
           return { ok: true, observedValue: value };
         }
         case "wait":
@@ -129,7 +162,8 @@ export class PlaywrightSurfaceAdapter implements SurfaceAdapter {
           return failure("CUSTOM_ACTION_UNSUPPORTED", `Browser adapter does not implement custom action '${action.name}'.`, false);
       }
     } catch (error) {
-      return failure("BROWSER_ACTION_FAILED", errorMessage(error), true);
+      const ambiguous = ["click", "submit", "type", "select"].includes(action.type);
+      return { ok: false, error: { code: "BROWSER_ACTION_FAILED", message: errorMessage(error), recoverable: !ambiguous, ambiguousCommit: ambiguous } };
     }
   }
 
@@ -137,24 +171,22 @@ export class PlaywrightSurfaceAdapter implements SurfaceAdapter {
     if (this.page.isClosed()) throw new Error("Cannot capture browser evidence after the page has closed.");
 
     await mkdir(this.evidenceDirectory, { recursive: true });
-    const id = `browser-evidence-${String(this.evidenceSequence++).padStart(4, "0")}`;
-    const path = resolvePath(this.evidenceDirectory, `${id}.png`);
-    await this.page.screenshot({ path, fullPage: true });
-
-    return {
-      id,
-      kind: "screenshot",
-      path,
-      metadata: {
-        reason,
-        location: this.page.url(),
-        title: await this.page.title(),
-      },
-    };
+    // Milestone 9 | Assignment §3.4-3.5 | REQ-EVD-002/003
+    // Persist a structural DOM snapshot instead of raw pixels or text. Text, values,
+    // attributes, URLs and credentials cannot leak through this richer evidence path.
+    const id = `browser-evidence-${this.sessionId}-${this.evidenceSequence++}`;
+    const path = resolvePath(this.evidenceDirectory, `${id}.json`);
+    const structure = await this.page.locator("body *").evaluateAll((elements) => elements.map((element) => ({
+      tag: element.tagName.toLowerCase(),
+      children: element.childElementCount,
+      visible: element.getClientRects().length > 0,
+    })));
+    await writeFile(path, JSON.stringify({ structure }, null, 2), { flag: "wx" });
+    return { id, kind: "snapshot", path, metadata: { format: "structural-dom-v1" } };
   }
 
   public async getSessionState(): Promise<SessionState> {
-    if (this.page.isClosed()) this.state = "expired";
+    if (this.page.isClosed() || await this.page.locator('[data-session-state="expired"]').count() > 0) this.state = "expired";
     return this.state;
   }
 
@@ -168,12 +200,16 @@ export class PlaywrightSurfaceAdapter implements SurfaceAdapter {
       this.owner = "none";
       return;
     }
+    if (this.owner !== "automation" || this.state !== "active") throw new Error("CONTROL_TRANSFER_CONFLICT");
     this.state = "paused";
+    this.owner = "none";
+    await this.activeAction;
     this.owner = "human";
   }
 
   public async resume(): Promise<void> {
     if (this.page.isClosed()) throw new Error("Cannot resume a closed browser session.");
+    if (this.owner !== "human" || this.state !== "paused") throw new Error("CONTROL_TRANSFER_CONFLICT");
     this.owner = "automation";
     this.state = "active";
   }
@@ -190,8 +226,8 @@ export class PlaywrightSurfaceAdapter implements SurfaceAdapter {
     }
 
     const locator = this.locatorFor(strategy);
+    await locator.first().waitFor({ state: "visible", timeout: this.timeoutMs });
     const count = await locator.count();
-    if (count === 0) throw new Error("no matches");
     if (requireUniqueMatch && count !== 1) throw new Error(`expected one match, found ${count}`);
 
     return { kind: "locator", locator: locator.first() };

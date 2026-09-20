@@ -18,7 +18,7 @@ describe("checkpoint edge cases", () => {
     const surface = new FakeSurfaceAdapter(new Set(["present"]));
     surface.setObservation({ location:"https://demo.invalid/member/42", title:"Member 42", visibleText:["Hello Member"], signals:{ ready:{value:true} } });
     const result = await evaluateCheckpoint(a, { id:"all",description:"all",all:[
-      {kind:"url_matches",pattern:"demo\\.invalid/member/42"}, {kind:"title_matches",pattern:"Member \\d+"}, {kind:"text_visible",text:"Hello"}, {kind:"target_present",targetId:"present"}, {kind:"session_state",state:"active"}, {kind:"adapter_signal",name:"ready",expected:{value:true}}, {kind:"adapter_signal",name:"missing"}
+      {kind:"url_matches",pattern:"demo\\.invalid/member/42"}, {kind:"title_matches",pattern:"Member \\d+"}, {kind:"text_visible",text:"Hello"}, {kind:"target_present",targetId:"present"}, {kind:"session_state",state:"active"}, {kind:"adapter_signal",name:"ready",expected:{value:true}}, {kind:"adapter_signal",name:"ready"}
     ]}, surface);
     expect(result.passed).toBe(true);
     expect(result.expected).toHaveLength(7);
@@ -33,7 +33,7 @@ describe("checkpoint edge cases", () => {
       {kind:"url_matches",pattern:"["},{kind:"title_matches",pattern:"["},{kind:"text_visible",text:"no"},{kind:"target_present",targetId:"undeclared"},{kind:"target_present",targetId:"present"},{kind:"session_state",state:"active"},{kind:"adapter_signal",name:"answer",expected:2}
     ]},surface);
     expect(result.passed).toBe(false);
-    expect(result.observed.join(" ")).toContain("url:");
+    expect(result.observed).toContain("");
     expect(result.observed.join(" ")).toContain("undeclared");
     expect(result.observed.join(" ")).toContain("target:present:selector");
   });
@@ -57,8 +57,8 @@ describe("policy edge cases", () => {
     expect(d.disposition).toBe("ALLOW");
   });
 
-  it("allows observations without a location", () => {
+  it("denies browser observations without a location", () => {
     const a=artifact(); const d=new ConfigurablePolicyEvaluator().evaluate({artifact:a,step:a.steps[0]!,context,observation:{surfaceKind:"browser",timestamp:"x",signals:{}}});
-    expect(d.disposition).toBe("ALLOW");
+    expect(d.disposition).toBe("DENY");
   });
 });

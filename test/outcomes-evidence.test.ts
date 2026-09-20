@@ -36,7 +36,7 @@ function artifact(): CapabilityArtifact {
 }
 
 function context(): ExecutionContext {
-  return { invocationId: "inv-sensitive", capabilityId: "transfer.submit", capabilityVersion: "1.0.0", inputs: { accountNumber: "987654321" } };
+  return { invocationId: "inv-sensitive", capabilityId: "transfer.submit", capabilityVersion: "1.0.0", inputs: { accountNumber: "987654321" }, authorization: { approvedStepIds: ["submit"] } };
 }
 
 function surface(): FakeSurfaceAdapter {
