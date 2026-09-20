@@ -20,6 +20,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Environment diagnostics
+        run: |
+          node --version
+          npm --version
+          npx vitest --version
+          npm ls @vitest/coverage-v8
+    
       - name: Checkout repository
         uses: actions/checkout@v4
 
