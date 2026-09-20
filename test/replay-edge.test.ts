@@ -72,6 +72,14 @@ describe("replay boundary regressions", () => {
     const a = artifact(); a.steps[0]!.action = { type: "click", effect: "read", targetId: "t" };
     expect((await replay(a, new FakeSurfaceAdapter(new Set(["other"])))).code).toBe("TARGET_RESOLUTION_FAILED");
   });
+  it("classifies session expiration during target resolution", async () => {
+    const a = artifact(); a.steps[0]!.action = { type: "click", effect: "read", targetId: "t" };
+    const s = surface(); vi.spyOn(s, "resolve").mockImplementationOnce(async () => { s.setSessionState("expired"); throw new Error("session expired during target resolution");});
+    const result = await replay(a, s);
+    expect(result.disposition).toBe("INTERVENTION_REQUIRED");
+    expect(result.code).toBe("SESSION_EXPIRED");
+    expect(s.actions).toHaveLength(0);
+  });
   it.each(["fail", "intervene"] as const)("classifies nonrecoverable and exhausted failures with %s", async onFailure => {
     for (const recoverable of [true, false]) {
       const a = artifact(); a.steps[0]!.recovery.onFailure = onFailure;
