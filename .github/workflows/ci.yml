@@ -20,15 +20,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Environment diagnostics
-        run: |
-          node --version
-          npm --version
-          npx vitest --version
-          npm ls @vitest/coverage-v8
-    
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Repository diagnostics
+        run: |
+          echo "GITHUB_SHA=$GITHUB_SHA"
+          echo "GITHUB_REF=$GITHUB_REF"
+          echo "HEAD=$(git rev-parse HEAD)"
+          git status --short
+          grep -A10 '"devDependencies"' package.json        
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
@@ -37,7 +38,14 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-
+      
+      - name: Verify test environment
+        run: |
+          node --version
+          npm --version
+          npm ls vitest
+          npm ls @vitest/coverage-v8          
+      
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
