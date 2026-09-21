@@ -2,6 +2,51 @@
 
 ## 09/21/2026 Completed
 
+### Milestone 17: Clean Installation and Evidence Packaging
+
+### Completed
+
+-   Exported committed revision `30181831` into an isolated directory and installed locked
+    dependencies under Node 24.21.0. Typecheck, build, and all 202 coverage tests passed;
+    configured coverage remains 100% across all four metrics.
+-   Executed offline discovery/replay and second-input replay of the genuine artifact from
+    the clean installation. Both succeeded; replay made zero model calls.
+-   Prepared a local gitignored reviewer ZIP with selected evidence, documentation, and
+    per-file hashes. No external delivery occurred.
+
+### Remaining Integration Work
+
+-   `npm audit` reports three high-severity findings through standalone `chromium` and its
+    dependencies. No automatic dependency fix was applied.
+-   Live discovery, exceptional scenarios, and human handoff were not repeated in this
+    clean export. Prior successful runs remain separately identified.
+
+### Milestone 16: Assignment Report and Operator Acceptance
+
+### Completed
+
+-   Added `REPORT.md` with the assignment's seven exact headings, covering architecture,
+    artifact design, deterministic outcomes, tenant extension design, handoff, safety, and cuts.
+-   Distinguished observed runtime results from mocked tests and proposed infrastructure.
+-   Documented that generated evidence stays gitignored and must be reviewed and delivered
+    separately or regenerated for a reviewer.
+
+### Tests
+
+-   Checked report headings against the assignment PDF, source claims against the implementation,
+    and local Markdown links. `git diff --check` passed.
+-   The headed handoff command built successfully. The first operator attempt returned
+    `FAILURE / EXECUTION_FAILED` with `RESUME_CHECKPOINT_FAILED`; its failure trace reports
+    a closed page. Automation did not execute the blocked step after handback.
+-   Failed-run evidence: `evidence/human-handoff/eaa65b49-ab42-40b8-82a2-5fe532061d96/`.
+    The next attempt succeeded after genuine operator interaction and explicit handback.
+-   Successful handoff: `evidence/human-handoff/ae8edcd1-5ebf-4c32-b32a-417f05a797a3/`.
+    The saved artifact parsed unchanged, replay made zero model calls, readiness changed from
+    failing to passing, and only the blocked step was retried. The completed prefix was not repeated.
+-   Scanned 21 handoff files, including both attempts and `validation.json`: zero occurrences
+    of the specified member IDs, balances, canaries, and credential patterns. Individual ownership
+    transitions are checked in code but are not separate persisted events.
+
 ### Milestone 15: P0 Security and Genuine Discovery Validation
 
 ### Requirements
@@ -54,9 +99,9 @@
 
 ### Remaining Integration Work
 
--   Complete assessment item #7: genuine headed same-session human takeover and explicit handback.
-    Existing automated HITL coverage does not establish this operator acceptance gate.
--   Complete assessment item #8: the final `REPORT.md`.
+-   Assessment items #7 and #8 are now recorded in Milestone 16 and `REPORT.md`.
+-   Clean-source install verification and local evidence packaging are now recorded below.
+-   Dependency audit remediation and actual reviewer delivery remain.
 -   Sensitive-target classification remains limited to supported, unambiguous standard CSS selectors.
 
 ## 09/19/2026 Completed
@@ -287,7 +332,7 @@ The deterministic execution architecture now operates against both the fake test
 surface and a real Playwright browser surface.
 
 Genuine OpenAI discovery, compilation into a reusable capability, and model-free replay
-with a second input are verified. Genuine operator takeover and handback remain open;
+with a second input are verified. Genuine operator takeover and handback are also verified;
 see the 09/21/2026 entry and validation record above.
 
 # Run
@@ -457,9 +502,8 @@ not part of this implementation slice.
 
 # Next Implementation
 
-1.  Complete genuine headed same-session human takeover and explicit handback,
-    preserving operator and resumed-execution evidence.
-2.  Write the final `REPORT.md` against the recorded acceptance evidence and limitations.
+1.  Resolve npm audit findings through the standalone `chromium` dependency.
+2.  Deliver the prepared reviewer evidence package through an explicitly authorized channel.
 
 # Planned Milestones
 

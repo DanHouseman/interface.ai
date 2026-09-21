@@ -96,7 +96,7 @@ Additional commands:
 
 Compiled JavaScript is written to `dist/`. Coverage enforces 100% statements, branches, functions, and lines for the configured source scope. Tests and offline demos do not make authenticated model calls.
 
-The last recorded full validation on September 21, 2026 passed type checking, build, and all 202 tests through `npm run coverage`, with all four coverage metrics at 100%. See [P0 security validation](./P0_SECURITY_VALIDATION.md) for the execution record and limitations.
+The last recorded full validation on September 21, 2026 passed type checking, build, and all 202 tests through `npm run coverage`, with all four coverage metrics at 100%. The same checks also passed after a clean-source dependency installation under Node 24.21.0. `npm audit` currently reports three high-severity findings through the standalone `chromium` dependency; remediation remains open. See [P0 security validation](./P0_SECURITY_VALIDATION.md) for the execution record and limitations.
 
 ## Run the demo
 
@@ -167,7 +167,7 @@ npm run demo -- handoff \
   --evidence evidence/human-handoff
 ```
 
-This opens a headed browser and pauses automation. In that same window, click **Release session**, then type `resume` in the terminal to return control. Any other answer cancels. The command selects the handoff scenario automatically. Automated handoff coverage exists; genuine operator takeover and handback remain an outstanding validation task.
+This opens a headed browser and pauses automation. In that same window, click **Release session**, then type `resume` in the terminal to return control. Any other answer cancels. The command selects the handoff scenario automatically. Automated handoff coverage and a genuine operator takeover/handback run are verified. The successful run resumed the blocked step without repeating prior actions; see the validation record.
 
 ## Evidence and validation
 
@@ -180,6 +180,7 @@ Run bundles contain `manifest.json`, `replay.json`, the saved `artifact.json` wh
 | Genuine OpenAI discovery and automatic replay, four completed provider calls and three UI actions | `evidence/live-validation/02def122-935d-4638-b66b-584849d5bffb/` |
 | Separate saved-artifact replay with a second input and zero model calls | `evidence/live-validation/282b5e47-c15a-4958-ae4d-912e129c3b56/` |
 | Member-not-found and session-expiry outcomes using the same genuine artifact | `evidence/runtime-taxonomy/validation.json` |
+| Genuine same-session human takeover, explicit handback, and successful continuation | `evidence/human-handoff/validation.json` |
 
 These are local validation records; see [P0_SECURITY_VALIDATION.md](./P0_SECURITY_VALIDATION.md) for provenance, assertions, and exact scan scope. Mocked-provider tests are recorded separately from genuine discovery. Session expiry is an injected local demo condition.
 
@@ -231,6 +232,7 @@ test/          Unit and end-to-end vertical-slice tests
 ELOG.md        Dated implementation progress and architectural decisions
 P0_SECURITY_VALIDATION.md  Security checks and genuine runtime evidence
 PROJECT_ASSESSMENT.md      Assessment and remaining acceptance work
+REPORT.md      Seven-section design report and implementation limits
 notes.md       Engineering notebook and design rationale
 ```
 
@@ -247,7 +249,7 @@ This is a focused vertical slice, not a production automation service. It demons
 5. Ambiguous irreversible effects are reconciled or escalated, never blindly repeated.
 6. Human intervention uses explicit pause, handoff, and control restoration.
 
-For deeper design notes and requirement mapping, see [`notes.md`](./notes.md).
+For the assignment design write-up, see [`REPORT.md`](./REPORT.md). For deeper design notes and requirement mapping, see [`notes.md`](./notes.md).
 
 ## License
 

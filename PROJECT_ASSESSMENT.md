@@ -1,5 +1,7 @@
 # Assignment A alignment assessment
 
+> Status update, 2026-09-21: the assessment below is historical. P0 items #1-#6 now have implementation/validation records in [P0_SECURITY_VALIDATION.md](./P0_SECURITY_VALIDATION.md); #8 is documented in [REPORT.md](./REPORT.md), and #9 in [README.md](./README.md). Genuine headed handoff (#7) succeeded on the second attempt after an initial rejected handback; see the latest validation entry. Generated evidence is gitignored by user direction, so earlier recommendations to commit evidence are superseded by separate reviewed delivery or regeneration.
+
 Assessment date: 2026-09-20. Scope: the current extracted project workspace under `interface_work/`, compared directly against `Assignment A — Computer-Use Automation System.pdf`. This assessment supersedes earlier snapshots and distinguishes implemented mechanisms from assignment-required proof.
 
 ## 1. Executive assessment

@@ -152,3 +152,52 @@ A recursive scan of all 15 regular files under evidence/runtime-taxonomy, includ
 No application source changes were necessary. Builds ran successfully as part of both CLI commands. The full unit/coverage suite was not rerun for this evidence-only task; its last executed result remains 202 passing tests with 100% coverage. These two executions prove the requested business-versus-technical distinction; they do not newly establish every possible runtime exception or recovery path.
 
 Next unfinished assessment item: #7, genuine headed same-session human takeover and explicit handback.
+
+## Headed human-handoff validation started: 2026-09-21
+
+Executed the documented handoff command against the saved genuine artifact. The initial sandboxed invocation exited 1 with the generic wrapper message and no proven cause; the subsequent invocation with local browser/server permissions built and reached the actual operator prompt.
+
+```sh
+npm run demo -- handoff --artifact evidence/live-validation/02def122-935d-4638-b66b-584849d5bffb/artifact.json --port 4173 --member DEMO-001 --evidence evidence/human-handoff
+```
+
+The user explicitly signaled resume. Run `eaa65b49-ab42-40b8-82a2-5fe532061d96` returned `FAILURE / EXECUTION_FAILED` with message `RESUME_CHECKPOINT_FAILED`. The trace also reports that evidence could not be captured after the page closed. The first step completed, the second step's operator-ready precondition failed, and no second-step action or successful handback was recorded. This is a rejected handback, not successful operator acceptance. The CLI exited 0 despite the failure disposition.
+
+A fresh headed attempt is waiting for the operator to click Release session, leave the page open, and explicitly return control. Report acceptance remains pending. `REPORT.md` has been created with the seven exact assignment headings and states this limitation. No full test-suite rerun is claimed for documentation work.
+
+### Genuine headed handoff accepted: 2026-09-21
+
+The second execution of the same command returned `SUCCESS / SUCCESS`, exit 0. Run: `ae8edcd1-5ebf-4c32-b32a-417f05a797a3`. The user interacted with the headed browser and explicitly replied Resume; the assistant forwarded `resume` to the waiting CLI without performing the browser action.
+
+- The first step completed once. The second step stopped at the failed `operator-ready` precondition.
+- `handoff.json` records `change INPUT` and `click BUTTON` during human ownership, without values.
+- After explicit handback, the trace records `HANDOFF / retry`, active session state, and the same readiness precondition passing.
+- The second and third steps executed successfully; the completed first step was not repeated. Final success and output extraction passed.
+- The artifact passes the normal parser and deep-equals the genuine discovery artifact. Provider is null and modelCallsDuringReplay is zero.
+- Evidence references retain one adapter session ID. Human-action recording requires human ownership; the coordinator verifies automation ownership before returning. Individual ownership transitions are not separately persisted, so that part of the acceptance argument combines recorded behavior with inspected enforcement code.
+- A recursive scan of 21 files across both handoff attempts and `validation.json` found zero specified member IDs, balances, canaries, or tested API-key/Bearer patterns.
+
+Machine-readable checks: `evidence/human-handoff/validation.json`. The failed first attempt remains preserved. P0 #7 is now validated; #8 is delivered in `REPORT.md`; #9 is documented in README. Generated evidence remains gitignored as requested. Fresh-checkout reproduction and separate reviewer evidence delivery are still outstanding. No application source changed and no full test suite was rerun; builds executed with the handoff commands.
+
+## Clean-install reproduction and review package: 2026-09-21
+
+Exported committed revision `30181831de32b90d086a2369e67a2ee5ab6905d7` using `git archive HEAD` into `/private/tmp/interface-verify-4nvhhajs`. This is a clean committed-source export, not a remote clone; pending documentation changes were not part of the tested revision. No working-tree node_modules or .env was copied. Browser installation used the existing machine's Playwright cache.
+
+The shell initially selected unsupported Node 26.7.0. That install was stopped and `npm ci` rerun with `/Users/null/.nvm/versions/node/v24.21.0/bin` prepended to PATH. Results under Node 24.21.0:
+
+| Command | Result |
+| --- | --- |
+| `npm ci` | Passed; 122 packages installed; audit reported 3 high-severity dependency findings |
+| `npx playwright install chromium` | Passed |
+| `npm run typecheck` | Passed |
+| `npm run coverage` | 202 tests in 16 files passed; all four configured metrics 100% |
+| `npm run build` | Passed |
+| `npm run demo -- offline --port 4173 --member DEMO-001 --evidence evidence/clean-validation` | SUCCESS; run ef4ca2de-f239-49da-8e7a-b110aa955a73 |
+| `npm run demo -- replay --artifact /Users/null/interface.ai/evidence/live-validation/02def122-935d-4638-b66b-584849d5bffb/artifact.json --port 4173 --member DEMO-002 --evidence evidence/clean-validation` | SUCCESS; run d7fc4688-5f3a-454c-9682-4de06c9204cc; zero model calls |
+| `npm audit --json` | Exit 1: chromium, extract-zip, and tmp reported high severity |
+
+Audit findings originate in the direct npm `chromium` dependency and its dependency tree. Source and tests import Chromium from `playwright`; no import of the standalone package was found. Dependency removal/update remains a follow-up; no automatic audit fix was applied. The audit report includes GHSA-jmr9-qjv8-65gv, GHSA-7pqw-9j4j-h8q3, GHSA-52f5-9888-hmc6, and GHSA-ph9p-34f9-6g65.
+
+Clean-run evidence was copied unchanged into `evidence/clean-validation/`. Authenticated discovery, exceptional scenarios, and manual handoff were not rerun in the clean export; their previously inspected executions remain separate evidence. No remote CI or entirely fresh-machine browser installation is claimed.
+
+Prepared `evidence/review-package-2026-09-21.zip` with selected genuine discovery/replay, runtime-taxonomy, both handoff attempts, clean-install run evidence, and documentation. Per-file SHA-256 hashes and package instructions are included. Generated evidence is scanned for specified synthetic IDs, balances, canaries, and credential patterns; documentation intentionally contains example commands. Original evidence is not rewritten, so historical absolute paths remain. The archive is local and gitignored, and has not been sent or uploaded.
