@@ -25,9 +25,9 @@ export class JsonFileEvidenceStore implements EvidenceStore {
       invocationId: context.invocationId,
       result: result as unknown as JsonValue,
     };
-    const redacted = redactor.redact(payload);
+    const redacted = redactor.sanitize(payload);
     await mkdir(this.directory, { recursive: true });
-    const path = join(this.directory, `${safe(context.invocationId)}.json`);
+    const path = join(this.directory, `${safe(redactor.redactString(context.invocationId))}.json`);
     await writeFile(path, `${JSON.stringify(redacted, null, 2)}\n`, "utf8");
     return path;
   }

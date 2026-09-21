@@ -4,6 +4,7 @@ import { stdin, stdout } from "node:process";
 import { OpenAIDiscoveryModel } from "../discovery/openai-discovery-model.js";
 import { ScriptedDemoModel } from "./scripted-model.js";
 import { runDemo, type DemoOptions } from "./run-demo.js";
+import { ExecutionError } from "../runtime/errors.js";
 
 export interface CliIO { readonly log: (message: string) => void; readonly ask: (message: string) => Promise<string>; }
 
@@ -30,7 +31,12 @@ export async function main(args: string[], environment: NodeJS.ProcessEnv = proc
     const answer = await io.ask("Automation is paused. In the SAME browser window click Release session. Type resume to hand control back: ");
     if (answer !== "resume") throw new Error("INTERVENTION_CANCELLED");
   } };
-  const completed = await execute(options);
+  let completed: Awaited<ReturnType<typeof execute>>;
+  try { completed = await execute(options); }
+  catch (error) {
+    if (error instanceof ExecutionError && error.code === "DEMO_DISCOVERY_FAILED") io.log(error.message);
+    throw error;
+  }
   io.log(`${completed.result.disposition}: ${completed.result.code}\nEvidence: ${completed.directory}`);
 }
 function terminalIO(): CliIO {

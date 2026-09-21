@@ -1,202 +1,253 @@
 # Assignment A alignment assessment
 
-Assessment date: 2026-09-19. Scope: the current working tree, including existing staged dependency changes.
+Assessment date: 2026-09-20. Scope: the current extracted project workspace under `interface_work/`, compared directly against `Assignment A — Computer-Use Automation System.pdf`. This assessment supersedes earlier snapshots and distinguishes implemented mechanisms from assignment-required proof.
 
-## 1. Objective, assumptions, and limits
+## 1. Executive assessment
 
-The objective is submission readiness against Assignment A, especially its required end-to-end workflow. The assignment PDF is the acceptance authority. `notes.md` and `ELOG.md` describe intended behavior and development history; their completion claims are not independent proof.
+**[STRONG INFERENCE, HIGH confidence] The implementation has advanced materially since the prior assessment and now contains a credible end-to-end vertical-slice architecture. It is not yet submission-ready because the assignment's two explicit proof/deliverable gates are still absent: (1) evidence from at least one genuine LLM-driven discovery run, and (2) `/REPORT.md`.** The README is also stale relative to the code and does not provide the required exact demo commands.
 
-Reviewed all 17 authored source TypeScript files, all 10 test files, both TypeScript configuration files, all three existing Markdown files, package metadata and the parsed lockfile, CI configuration, environment template, ignore rules, license, and the evidence inventory. Read all 10 assignment pages and inspected their rendered layout. Dependency source, Git objects, and generated build/coverage files are not authored project implementation.
+The most important change is that several earlier architectural blockers are now implemented rather than merely planned:
 
-Assumptions and constraints:
+- a concrete OpenAI discovery provider exists;
+- discovery applies external policy before actions and independently verifies completion;
+- compilation preserves reviewed typed I/O, targets, authority, and input bindings while recording only successful executed actions;
+- deterministic replay handles typed outputs, business outcomes, bounded waiting/retry, ambiguous commits, and structured failures;
+- browser-level network/navigation guarding exists;
+- same-session human pause/takeover/handback is implemented and human actions are recorded;
+- a synthetic local member-service UI and runnable demo CLI exist;
+- regression coverage has expanded substantially, including browser, policy, replay, redaction, CLI, handoff, and integrated demo tests.
 
-- Assess the local project as supplied; do not presume that uncommitted or externally stored discovery evidence exists.
-- A synthetic local application is an acceptable real UI under the assignment. A scripted model test double does not satisfy genuine LLM discovery.
-- Keep the current single-process architecture. Desktop implementation, a production operator console, and distributed infrastructure are not required.
-- Model access and provider preference are unknown. Neither is needed to identify the current gaps.
-- Public repository visibility, remote CI status, a clean-machine install, and any external evidence were not verified. **Incomplete Evidence** for those items.
-- No model calls, external transactions, publication, or source fixes were performed. Verification regenerated ignored build/coverage output; the browser test regenerated its existing screenshot without a Git-visible change.
+However, the assignment explicitly states that the discovery run **has to be real** and that evidence must be committed under `/evidence/`. The supplied `/evidence/` contains test/runtime artifacts, not a genuine model discovery bundle. That remains a hard acceptance blocker regardless of test breadth.
 
-Confidence labels below are engineering judgments, not statistically measured probabilities: **Fact: 99%**, for source inspection or observed test/probe results; **Strong Inference: 95-98%**, for implications established by several facts; **Reasonable Hypothesis: 80%**, for the proposed shortest completion path; **Speculation: unquantified**, excluded from scoring and recommendations.
+## 2. Verification basis and limits
 
-## 2. Adversarial assessment
+### Reviewed
 
-This assessment combines dependency analysis, first-principles acceptance criteria, failure-mode and security analysis, reviewer incentives, and the risk of mistaking reassuring internal metrics for demonstrated behavior.
+**[FACT]** The supplied snapshot contains 27 authored TypeScript source files and 16 test files (15 `*.test.ts` files plus `test/helpers.ts`), approximately 3,577 lines across `src/` and `test/`. The assessment reviewed the assignment PDF, source tree, test inventory, README, ELOG, engineering notes, package/configuration files, and evidence inventory.
 
-| Perspective | Assessment | Evidence tier |
+**[FACT]** The assignment PDF was text-extracted and rendered page-by-page for inspection. Its must-have acceptance path is:
+
+`goal -> genuine LLM-driven live UI run -> saved typed capability -> deterministic model-free replay with inputs/outputs/outcomes -> real same-session human escalation -> evidence for both phases`.
+
+### Verification limitation
+
+**[FACT]** I could not independently execute the current test/typecheck/build suite from this archive because dependencies are not included and `npm install --ignore-scripts` did not complete within the available execution window. The local runtime available for this assessment is Node 22.16.0, while the project targets Node 24. Therefore, current test-pass and 100% coverage claims in project notes are **not independently re-verified here**.
+
+**[FACT]** The current workspace contains no `package-lock.json`, `REPORT.md`, `.github/` workflow, `.gitignore`, `.env.example`, or `LICENSE`. The README nevertheless links to `LICENSE` and states a Node requirement (`24.21+`) that does not match `package.json` (`^24.3.0`). The workspace also contains macOS `__MACOSX` packaging artifacts. No `.git` metadata is present, so public-repository state, commit history, and CI cannot be verified from this snapshot.
+
+## 3. Requirement-by-requirement comparison
+
+| Assignment requirement | Current state | Assessment |
 | --- | --- | --- |
-| Strongest supporting argument | The core boundaries fit the brief: portable artifact schema, model-free replay, a replaceable surface adapter, explicit outcomes, checkpoints, and an isolated policy component. Reuse these components. | Fact / Strong Inference |
-| Strongest opposing argument | The assignment's central proof is absent: a genuine model-driven UI run producing a saved, parameterized capability that replays with outputs and a real human handoff. Passing component tests cannot replace that proof. | Fact / Strong Inference |
-| Edge cases | An action navigates outside authority; a write times out after committing; a not-found result conflicts with success postconditions; an output is absent; human control has not actually been returned; screenshots contain sensitive text. Current gaps occur at these boundaries. | Fact for reproduced cases; Strong Inference for browser commit and concurrency consequences |
-| Second-order effects | Weak success checkpoints can make a broken compiler look reliable. Model-derived allowlists convert discovered behavior into permission. A high coverage target can reward exercising current behavior without challenging its correctness. | Strong Inference |
-| Unintended consequences | Retrying a write can duplicate an effect; restarting replay after handoff can repeat completed actions; raw screenshots can defeat JSON redaction; inconsistent documentation makes review harder. | Strong Inference |
-| Reviewer incentives | The brief explicitly prioritizes a complete, small system and clear trade-offs. Additional abstractions and longer notebooks provide less acceptance value than one reproducible integrated demonstration. | Strong Inference |
+| **3.1 Goal-driven agent loop** | `DiscoveryEngine` implements bounded observe-decide-act, timeout/abort, concurrency protection, live `SurfaceAdapter` interaction, model decisions, policy gating, and independent success verification. `OpenAIDiscoveryModel` provides a concrete live provider. | **Mostly implemented.** Missing the assignment-required genuine run evidence. Discovery is also highly scaffolded by a host-provided target/grant catalog, so the model discovers action order rather than element-identification strategy. |
+| **3.2 Structured artifact** | Zod schema is typed/versioned and includes application compatibility, typed inputs/outputs, outcomes, policy, ordered target strategies, steps, recovery, checkpoints, and provenance. Compiler records successful executed actions and preserves host-reviewed bindings/contracts. | **Strong implementation.** The schema is one of the strongest parts of the project. Need a saved real generated artifact in `/evidence/`. |
+| **3.3 Deterministic replay** | Replay has no model dependency; validates invocation/artifact; resolves declared targets deterministically; checks pre/post/success checkpoints; polls bounded conditions; extracts typed outputs; distinguishes business outcomes, recoverable states, intervention, and failure; treats ambiguous risky commits conservatively. | **Strong implementation.** Must still be demonstrated from a saved artifact generated by a real discovery run. |
+| **3.4 Safety & policy** | Artifact and optional host ceiling are intersected; action types, origins/routes, navigation destinations, approvals, and risky effects are checked. Browser request interception constrains redirects/subresources. Evidence redaction and structural evidence reduce persistence risk. | **Substantially implemented, with one important data-minimization gap:** the live model request currently receives `inputs`, including fields marked sensitive, even when host input binding means the model does not need their values. Discovery persistence can also contain sensitive output text before the output value has been registered with the redactor. |
+| **3.5 Evidence / observability** | Discovery/replay traces, policy/checkpoint/action events, run bundles, provider metadata, and structural DOM evidence exist. Evidence filenames are run-scoped and overwrite-resistant. | **Mechanism implemented; submission evidence missing.** Existing `/evidence/` is test/runtime evidence rather than the required genuine discovery + replay demonstration bundle. Structural snapshots are safe but diagnostically sparse because they intentionally omit text/attributes. |
+| **3.6 Human escalation & handoff** | `HumanHandoffCoordinator` pauses the same session, transfers ownership, routes an intervention, waits for explicit handback, verifies resumed state, restores automation ownership, and records human click/change kinds without values. Replay resumes the blocked step rather than restarting the capability. | **Strong minimal implementation.** This now satisfies the required seam conceptually and in code. Needs committed demonstration evidence from the headed handoff path. |
+| **3.7 Heterogeneity & scale design** | Artifact has browser/desktop/terminal/remote surface identity and multiple target strategy types, including accessibility, structural, visual, and terminal-field concepts. Surface behavior is isolated behind `SurfaceAdapter`; compatibility tags exist. | **Good abstraction, incomplete required write-up.** Tenant specialization/override precedence, drift detection, version compatibility, and promotion/revalidation policy need to be explained in `/REPORT.md`. |
+| **Section 6 deliverables** | Source exists; README exists; demo CLI exists. | **Incomplete.** `/REPORT.md` absent; README does not document the current demo commands; `/evidence/` lacks genuine LLM discovery/replay example; public GitHub state not verified. |
 
-## 3. Evidence and concrete findings
+## 3.1 Assignment acceptance-gate status
 
-### Verification results
+This is the shortest reviewer-facing view of the current project. “Implemented” means the mechanism exists in source; “Proven” means the supplied repository evidence demonstrates the assignment requirement end to end.
 
-| Check | Observed result | Tier |
-| --- | --- | --- |
-| Runtime | Node 24.21.0; npm 12.0.2 | Fact |
-| `npm run typecheck` | Passed; configuration includes production source only | Fact |
-| `npm run build` | Passed | Fact |
-| Existing tests | 54/54 passed across 10 files when executed with browser-launch permissions | Fact |
-| Initial sandboxed test attempt | 49 passed; browser suite could not launch Chromium because macOS denied its process bootstrap operation | Fact |
-| `npm run coverage` | All tests passed, command exited 1 because configured 100% thresholds were unmet | Fact |
-| Coverage | Statements 94.32%; branches 80.40%; functions 94.84%; lines 96.42% | Fact |
-| Coverage of discovery engine | Branches 38.88% | Fact |
-| Coverage of handoff coordinator/router | Branches 57.14% | Fact |
+| Acceptance gate | Implemented | Proven in supplied snapshot | Remaining proof/work |
+| --- | :---: | :---: | --- |
+| Natural-language goal + live target | Yes | Partial | Live-model run is not committed. |
+| Genuine LLM observe-decide-act loop | Yes | **No** | Execute `discover --live` against the local app and preserve provider/run evidence. |
+| Real UI interaction | Yes | Yes, via Playwright tests/offline demo path | Tie this to the genuine model run. |
+| Typed/versioned reusable capability | Yes | Partial | Commit the artifact produced by the genuine run. |
+| Deterministic model-free replay | Yes | Partial | Replay the genuine artifact with a second input and preserve zero-model-call evidence. |
+| Typed output extraction | Yes | Partial | Preserve successful replay output evidence after fixing sensitive-output redaction. |
+| Business outcome vs recoverable vs failure | Yes | Partial | Commit at least one exceptional replay bundle. |
+| Explicit allowlist and risky-action policy | Yes | Yes in code/tests | Add reviewer-facing evidence/description in `REPORT.md`. |
+| No sensitive data persisted | Partial | **No** | Close discovery-output redaction gap and scan evidence with canary values. |
+| Human same-session takeover and handback | Yes | Partial | Run headed handoff and commit evidence showing pause, operator action, resume. |
+| Heterogeneous surface abstraction | Yes | Design-level | Explain extension seam and limitations in `REPORT.md`. |
+| Multi-tenant reuse/drift strategy | Partial | **No write-up** | Define base capability + tenant/version specialization and revalidation strategy. |
+| `/README.md` exact setup/demo path | Partial | **No** | Rewrite around actual CLI. |
+| `/REPORT.md` seven exact headings | **No** | **No** | Create required 1-3 page report. |
+| `/evidence/` discovery + replay demonstration | Mechanism only | **No** | Produce reviewer-oriented evidence bundle from real discovery and deterministic replay. |
 
-The initial browser failure was environmental. The coverage failure is a reproducible project check failure. CI currently runs typecheck, tests, and build, but does not run coverage. See [vitest.config.ts](/Users/null/interface.ai/vitest.config.ts:7) and [CI](/Users/null/interface.ai/.github/workflows/ci.yml:1).
+### 3.2 Highest-value gaps by evaluation weight
 
-### F1. Genuine discovery and submission evidence are missing
+The assignment says evaluation is weighted roughly toward system design first, then core-loop correctness, robustness/error handling, human escalation, generalization, safety, code quality, and communication. Against that weighting, the remaining gaps are not equal:
 
-**Fact.** `DiscoveryModel` is an interface; there is no concrete provider implementation, executable discovery entry point, demo application, or goal-to-replay command. Discovery tests use a scripted object and `FakeSurfaceAdapter`. The browser tests exercise adapter mechanics against inline HTML independently of discovery and replay. `/evidence/` contains one browser-test screenshot, no saved capability, discovery log, or replay log.
+1. **Core-loop proof:** the code has a provider-backed discovery path, but the repository does not contain the mandatory genuine LLM-driven run. This is the single highest-risk acceptance gap because the brief explicitly says the discovery run "has to be real."
+2. **Safety proof:** `OpenAIDiscoveryModel.decide()` serializes `input.inputs` into the provider request even though the prompt says host-bound fields are filled by the host. For the demo, `memberId` is marked sensitive. This is unnecessary disclosure and should be removed before generating final evidence.
+3. **Evidence privacy:** `writeRunBundle()` can redact known sensitive inputs/outputs, but the discovery trace is persisted before discovered sensitive output values are supplied as `outputs`. A sensitive value present only in an observation/free-text trace can therefore escape value-based redaction.
+4. **Communication/deliverables:** `REPORT.md` is an explicit required artifact and is absent. README does not expose the actual end-to-end CLI despite the CLI existing.
+5. **Reproducibility:** no lockfile is present, README/package Node constraints disagree, and this workspace cannot be clean-installed/tested under its declared Node 24 runtime here.
 
-The PDF, Section 4, explicitly requires a genuine LLM-driven live run. Section 6 requires a saved artifact and logs from both phases. This is a submission blocker regardless of unit-test quality.
+**[STRONG INFERENCE, HIGH confidence]** The project is past the architecture-build phase. The critical path is now privacy-boundary repair -> genuine integration proof -> deliverable hardening. Adding more framework or platform breadth before those gates close would reduce submission quality by consuming time without addressing the assignment's highest-weight criteria.
 
-Sources: [discovery contracts](/Users/null/interface.ai/src/discovery/discovery-contracts.ts:19), [discovery test](/Users/null/interface.ai/test/discovery-handoff.test.ts:5), [browser tests](/Users/null/interface.ai/test/playwright-surface-adapter.test.ts:23), [package scripts](/Users/null/interface.ai/package.json:6).
+## 4. What changed since the previous assessment
 
-### F2. Discovery does not enforce proposed-action authority
+The previous assessment identified several correctness gaps that are now closed or materially reduced.
 
-**Fact.** The discovery engine checks the current observed origin and route before asking the model. It does not check the proposed navigation destination, action type, or effect against external policy, and has no approval gate. It also accepts model completion without an independently verified goal condition. The compiler derives permitted action types from model decisions.
+### Closed or substantially closed
 
-**Reproduced:** a scripted model proposed an `irreversible_write` submit with no approval. The fake surface executed it and discovery returned `SUCCESS`.
+**[FACT] Discovery action authority.** Discovery now materializes model proposals through externally supplied grants, constructs a temporary validated capability step, and runs the same policy evaluator before execution. Model completion is verified against an independently declared success checkpoint.
 
-**Strong Inference, 98%.** The stated invariant that the model does not define authority is not yet implemented across discovery and compilation. A model acting on malicious page instructions can exploit the missing action gate; the existing replay-oriented tests do not demonstrate discovery resistance.
+**[FACT] Destination enforcement.** Policy now validates navigation destinations as well as current location. The Playwright adapter also installs a request guard before navigation, covering redirects and subresources within the configured authority boundary.
 
-Sources: [discovery engine](/Users/null/interface.ai/src/discovery/discovery-engine.ts:7), [compiler](/Users/null/interface.ai/src/discovery/capability-compiler.ts:16).
+**[FACT] Capability compilation.** The compiler no longer invents empty contracts or weak checkpoints. The host specification supplies typed I/O, targets, outcomes, policy, bindings, and success criteria; the compiler records only successful executed actions from the discovery trace.
 
-### F3. Replay policy checks the source location, not the destination
+**[FACT] Same-session handoff.** The former synthetic immediate resume has been replaced by a deferred handback model. The coordinator pauses automation, cedes the same page/session to a human, waits for an explicit response, verifies state, then restores automation ownership.
 
-**Fact.** The evaluator validates `observation.location`, action type, and an optional step-approval flag. It does not evaluate the resolved navigation value. Output extraction executes additional `read` actions outside this policy/trace path. Retries also bypass a fresh policy evaluation.
+**[FACT] Browser runtime handling.** The target app and tests now exercise delayed UI behavior, session expiry, permission denial, unexpected dialogs, and human blocking. Replay polls checkpoints instead of repeating actions while waiting for UI state.
 
-**Reproduced:** with authority limited to `https://demo.invalid`, replay executed a navigation to `https://outside.invalid/private` and returned `SUCCESS` against the fake adapter. The fake adapter does not navigate a real browser; this probe proves the unauthorized action reached the adapter.
+**[FACT] Evidence safety.** Rich browser evidence is deliberately structural rather than raw screenshots/text, avoiding direct persistence of page text, input values, URLs, and credentials. Run-bundle JSON passes through a central redactor.
 
-Risk classification alone does not require approval: `humanApprovalRequired` defaults to false and the evaluator does not inspect `effect`. The assignment permits blocking, confirmation, or flagging risky actions, so effect-dependent evidence capture deserves partial credit. It does not justify the notebook's stronger approval claims.
+### Still open or newly visible
 
-Sources: [policy evaluator](/Users/null/interface.ai/src/policy/policy-evaluator.ts:35), [navigation materialization](/Users/null/interface.ai/src/replay/replay-engine.ts:226), [output extraction](/Users/null/interface.ai/src/replay/replay-engine.ts:308).
+#### F1. Genuine discovery evidence is still absent
 
-### F4. Compilation does not produce a reusable capability contract
+**[FACT, blocker]** The assignment explicitly requires at least one genuine LLM-driven run against a live surface with evidence under `/evidence/`. The project now has the implementation path (`demo discover --live`) but the supplied evidence directory contains only test/runtime artifacts. There is no committed live-model manifest, discovery trace, generated capability, and deterministic replay bundle demonstrating the required thread.
 
-**Fact.** Compilation emits empty inputs, outputs, and business outcomes; embeds discovered values as literals; converts every action decision into a step without checking whether the action succeeded; and chooses the first line of final visible text, or merely an active session, as the success checkpoint. It does not retain step preconditions or postconditions. Repeated target IDs overwrite earlier target definitions.
+This is the highest-priority remaining item.
 
-**Reproduced:** a successful discovery trace with one failed attempt followed by one successful action compiled into two steps. The generated contract was empty and the success condition was the generic text `Member Search`.
+#### F2. The discovery seam is arguably over-scaffolded
 
-**Strong Inference, 98%.** The schema can represent much of the required contract, but the compiler currently creates a fixed recording with a weak success test. Adding an LLM provider alone will not deliver parameterized replay.
+**[FACT]** `demoSpecification()` predeclares every demo target, locator, input/output contract, business outcome, action grant/effect, and success checkpoint. The model chooses actions among those reviewed controls and discovers their ordering.
 
-Source: [capability compiler](/Users/null/interface.ai/src/discovery/capability-compiler.ts:5).
+**[STRONG INFERENCE, MED-HIGH confidence]** This is defensible as a safety-first design, but it narrows "discovery" substantially. A reviewer may reasonably ask what the model actually learned beyond the sequence. The assignment specifically emphasizes recording how target controls are identified and robustness reasoning. In the current demo, target identification is supplied by the host before discovery rather than learned from the run.
 
-### F5. Human handoff is a disconnected foundation
+The project does not need a general autonomous selector generator, but the write-up should state this cut explicitly. A small improvement would let discovery select among predeclared candidate strategies or capture which strategy actually resolved each control, then persist that evidence/provenance into the compiled artifact.
 
-**Fact.** `waitForResume()` immediately returns a synthetic `demo-operator` response when nobody has responded. Neither execution engine invokes the coordinator. Replay returns a terminal intervention result and has no continuation cursor. Human actions can be supplied as records, but are not captured from a live operator surface. The coordinator observes after resuming; it does not verify a declared resume checkpoint before returning control.
+#### F3. Sensitive values are unnecessarily exposed to the model
 
-**Reproduced:** intervention completed with automation ownership restored and an empty human-action list, without any human response.
+**[FACT]** `OpenAIDiscoveryModel.decide()` serializes `input.inputs` into the provider request. In the demo, `memberId` is declared `sensitive: true`, while the prompt already says input-bound fields are filled by the host and the model should omit their value.
 
-**Strong Inference, 95%.** Owner flags prevent new adapter actions while paused, but do not constitute an atomic ownership protocol: already-running actions and concurrent pause/resume calls are not serialized. Same-session human control and safe continuation remain to be demonstrated.
+**[STRONG INFERENCE, HIGH confidence]** Sending the raw bound value to the model violates the project's own data-minimization intent and is unnecessary for this workflow. For a financial-data architecture, sensitive bound inputs should be replaced with typed placeholders or omitted from model context unless the model demonstrably needs them.
 
-Sources: [handoff](/Users/null/interface.ai/src/hitl/intervention.ts:10), [immediate resume](/Users/null/interface.ai/src/hitl/intervention.ts:27), [browser ownership](/Users/null/interface.ai/src/surface/playwright-surface-adapter.ts:165).
+#### F4. Discovery evidence redaction does not yet know sensitive output values
 
-### F6. Redaction does not cover all persistence paths
+**[FACT]** `writeRunBundle()` redacts sensitive output values only when those concrete values are supplied in its `outputs` argument. During discovery, `result.outputs` is `{}` and the discovery trace can contain full visible page text from the terminal observation. Therefore a sensitive output such as the displayed balance can appear in persisted discovery observations without being registered as a sensitive value.
 
-**Fact.** `EvidenceRedactor` collects sensitive input values, but ignores output sensitivity declarations. It replaces sensitive values in strings, while numbers and booleans remain unchanged. Screenshots are written directly to disk without masking. Compilation can embed input values and observed text into the artifact. Discovery has no sanitized persistence pipeline.
+**[STRONG INFERENCE, HIGH confidence]** This is a real persistence boundary gap even though the demo data is synthetic. Fix before using real or realistic sensitive values. Options include extracting declared sensitive outputs before persistence, field-aware observation sanitization, or suppressing/transforming model-facing and persisted visible text for declared sensitive targets.
 
-**Reproduced:** a declared sensitive numeric input and a declared sensitive balance output remained unchanged after redaction.
+#### F5. Submission documentation is stale/incomplete
 
-This identifies a leakage path, not evidence that real customer data was exposed. The distinction matters. The assignment's prohibition concerns artifacts and logs as well as richer evidence.
+**[FACT, blocker]** `/REPORT.md` is absent despite being an explicit deliverable with seven required headings.
 
-Sources: [redactor](/Users/null/interface.ai/src/evidence/redactor.ts:10), [evidence store](/Users/null/interface.ai/src/evidence/evidence-store.ts:20), [screenshot writer](/Users/null/interface.ai/src/surface/playwright-surface-adapter.ts:136), [compiler](/Users/null/interface.ai/src/discovery/capability-compiler.ts:11).
+**[FACT]** README describes architecture accurately at a high level but does not document the implemented `offline`, `discover --live`, `replay --artifact`, and `handoff --artifact` demo commands. Its minimal replay example references `capabilities/example.json`, which is not present. It says the supported Node range is `>=24.21.0 <25`, while `package.json` declares `^24.3.0`. README references a `LICENSE` file not present in this snapshot.
 
-### F7. Browser errors can bypass ambiguous-commit protection
+#### F6. Reproducible packaging is incomplete in the supplied snapshot
 
-**Fact.** The browser adapter converts every caught action error into recoverable `BROWSER_ACTION_FAILED`, without setting `ambiguousCommit`. Replay retries recoverable actions when configured to do so. Schema validation allows retrying risky actions when reconciliation is declared, but actual reconciliation is entered only when the adapter returns the ambiguity flag.
+**[FACT]** There is no lockfile in the supplied archive. For a take-home that reviewers should run quickly, a committed `package-lock.json` materially improves reproducibility. The archive also lacks the CI/config files referenced by the prior assessment.
 
-**Strong Inference, 98%.** A configured risky click that commits and then times out can be retried without reconciliation. The existing ambiguity tests inject the flag into the fake adapter; they do not establish that real browser failures are classified correctly.
+**[UNKNOWN]** These files may exist in the actual Git repository and simply have been omitted from the zip. Verify the repository itself before changing anything solely on this basis.
 
-Sources: [browser error conversion](/Users/null/interface.ai/src/surface/playwright-surface-adapter.ts:131), [retry loop](/Users/null/interface.ai/src/replay/replay-engine.ts:251), [schema retry rule](/Users/null/interface.ai/src/artifact/capability-schema.ts:230).
+#### F7. Provider integration should be validated against the current API contract
 
-### F8. Replay does not enforce output contracts or all outcome semantics
+**[FACT]** The live provider is hand-written against the Responses HTTP endpoint and tests mock transport behavior. No genuine provider call is present in evidence.
 
-**Fact.** Extraction ignores output `required` and `type`. Required outputs can disappear silently; reads can return a value of the wrong type. Observation, checkpoint, and output-resolution exceptions can escape the structured result boundary.
+**[STRONG INFERENCE, HIGH confidence]** The first real discovery run is also the required integration test for response-format compatibility, model behavior, abort semantics, and prompt sufficiency. Do not assume mocked transport proves live API compatibility.
 
-**Reproduced:** a required missing output returned `SUCCESS` with `{}`; a required numeric output returned `SUCCESS` with the string `$123.45`.
+## 5. Architecture and security assessment
 
-**Fact.** Postconditions are evaluated before post-action business outcomes. **Reproduced:** when an action produces `Member not found` while its success postcondition expects member detail, replay returns `POSTCONDITION_FAILED` instead of the declared business outcome.
+### Strongest design choices
 
-Sources: [post-action ordering](/Users/null/interface.ai/src/replay/replay-engine.ts:142), [output extraction](/Users/null/interface.ai/src/replay/replay-engine.ts:308).
+The following are well aligned with the assignment's evaluation priorities:
 
-### F9. Validation and waiting need targeted completion
+1. **Artifact as the production trust boundary.** Replay depends on a validated artifact and policy, not a model transcript.
+2. **External authority.** The model cannot mint targets, grants, approvals, or policy authority.
+3. **Explicit outcome taxonomy.** Business outcomes are separate from infrastructure failures and recoverable conditions.
+4. **Conservative uncertain commits.** Ambiguous risky actions are reconciled or escalated rather than blindly retried.
+5. **Surface seam.** Playwright is behind an adapter and the artifact schema does not contain Playwright-specific types.
+6. **Same-session ownership model.** Human/automation ownership is explicit and action admission is drained before transfer.
+7. **Bounded waiting without repeated side effects.** Checkpoints poll observations instead of replaying actions while waiting.
 
-**Fact.** Cross-reference validation covers step targets and input references, but not all checkpoint/output targets or duplicate identifiers. Action-specific requirements are checked later during replay rather than consistently at artifact load time. Output sources may be empty or specify both mechanisms. Object/array output types do not describe their nested shape.
+### Main residual risks
 
-**Reproduced:** duplicate step IDs and an undeclared required output target were accepted by the artifact schema.
-
-**Fact.** Browser target resolution uses an immediate `count()` before action auto-waiting. Checkpoints are sampled once. Browser session expiry means a closed page, not a login-expired application state. Observations expose body text, not structured control metadata, frame context, or model-facing screenshots. Discovery's timeout is checked between iterations and cannot cancel a stalled model/adapter call. Its action trace omits read `observedValue` and signals.
-
-**Strong Inference, 95%.** Delayed controls, login redirects, iframe content, and weakly labeled interfaces remain integration risks despite the useful abstraction. Desktop implementation is optional; these limitations should be bounded and documented for the chosen browser demo.
-
-Sources: [schema validation](/Users/null/interface.ai/src/artifact/capability-schema.ts:210), [browser observation](/Users/null/interface.ai/src/surface/playwright-surface-adapter.ts:40), [target resolution](/Users/null/interface.ai/src/surface/playwright-surface-adapter.ts:181), [checkpoint evaluation](/Users/null/interface.ai/src/replay/checkpoint-evaluator.ts:12), [discovery loop](/Users/null/interface.ai/src/discovery/discovery-engine.ts:10).
-
-### F10. Documentation and packaging are not submission-ready
-
-**Fact.** `/REPORT.md` is absent. The assignment requires approximately 1-3 pages under these exact headings: Architecture; Artifact schema; Determinism & error handling; Heterogeneity & multi-tenant; Escalation & handoff; Safety; Cuts.
-
-The README has no runnable discovery/replay demo and references a nonexistent `capabilities/example.json`. It states an engine range of `>=24.21.0 <25`, while package metadata currently specifies `^24.3.0`. Environment variable names exist but no executable integration consumes them.
-
-`ELOG.md` correctly lists missing live integration, but also claims discovery policy-decision traces that the trace union cannot represent. Its older next-steps section still requests a browser adapter already present. `notes.md` includes worthwhile requirements but several exceed the assignment's mandatory scope, including linting, fingerprints, extensive operational checks, and additional demonstration depth. Treat these as internal plans, not additional submission gates.
-
-The `chromium` runtime package has no authored-source import; Playwright already supplies the browser automation dependency and installation path. Review whether this extra downloader is needed. The lockfile root matches current package dependencies and engine metadata. Test files are transpiled by Vitest but excluded from the TypeScript typecheck configuration. Some new modules and tests are compressed into long lines, reducing reviewability.
-
-Sources: [README](/Users/null/interface.ai/README.md:62), [example](/Users/null/interface.ai/README.md:108), [ELOG claims](/Users/null/interface.ai/ELOG.md:18), [old roadmap](/Users/null/interface.ai/ELOG.md:349), [tenant requirements](/Users/null/interface.ai/notes.md:1205), [TypeScript config](/Users/null/interface.ai/tsconfig.json:20).
-
-## 4. Requirement alignment and decision
-
-**Strong Inference, 98%: retain the architecture, but do not treat this working tree as a complete submission.** The missing integrated workflow and demonstrated correctness gaps are material must-have failures. A percentage-complete score would hide those dependencies.
-
-| Assignment requirement | Current alignment | What closes the gap |
-| --- | --- | --- |
-| 3.1 Goal-driven live agent | Partial foundation; required demonstration missing | Concrete model provider, informative observations, validated decisions, guarded live UI run, saved evidence |
-| 3.2 Structured capability | Strong schema foundation; compiler incomplete | Successful executed flow, explicit input bindings, output extraction contract, meaningful checkpoints, saved artifact |
-| 3.3 Deterministic replay | Strong component foundation; incomplete integrated correctness | Browser replay of generated artifact, enforced outputs, deliberate waits, correct business outcomes and browser error classification |
-| 3.4 Safety | Partial; blocking gaps | External action/destination policy in both phases, conservative risky actions, end-to-end sanitization |
-| 3.5 Evidence | Partial replay support | Linked, sanitized discovery and replay logs; artifact; failure evidence; unique run-scoped paths |
-| 3.6 Human handoff | Foundation only | Explicit wait for human, same live session, action recording, verified continuation without repeating completed writes |
-| 3.7 Heterogeneity and scale design | Good abstraction; write-up incomplete | Concrete explanation of legacy/desktop perception and action, tenant override precedence, compatibility checks, drift handling |
-| Section 6 deliverables | Incomplete | Runnable README demo, exact REPORT headings, evidence bundle, confirmed public repository |
-
-| Strategic choice | Benefit | Cost / trade-off | Decision |
+| Risk | Impact | Current mitigation | Remaining action |
 | --- | --- | --- | --- |
-| Complete one synthetic local banking workflow | Reproducible failures and human takeover; direct proof of every must-have | Must build a small real UI and avoid hard-coding model decisions | Recommended, Reasonable Hypothesis 80% |
-| Use a public demo site | Less target-app code | Less control over sessions, failures, availability, and safety boundaries | Valid alternative if it supports all required scenarios |
-| Add more adapters, registries, or distributed services now | More breadth | Does not close the missing core demonstration | Defer |
-| Pursue 100% coverage before integration | Meets an internal numeric target | Does not prove the workflow and can preserve incorrect behavior | Prioritize behavioral regressions; then reconcile the target honestly |
+| No genuine discovery proof | Submission rejection / central requirement unproven | Live provider and CLI exist | Run and commit a real discovery + replay bundle |
+| Sensitive input sent to model | Data-minimization/privacy violation in realistic deployment | Synthetic demo data only | Remove/mask sensitive bound values from model context |
+| Sensitive discovery output in trace | Raw regulated value could persist in JSON | Central redactor, structural browser snapshots | Make discovery observation/output redaction field-aware |
+| Discovery relies on predeclared controls | Reviewer may view model role as too narrow | Strong safety and deterministic target catalog | Document cut; optionally persist actual resolved strategy provenance |
+| No REPORT / stale README | Explicit deliverable failure | Design reasoning exists in `notes.md`/`ELOG.md` | Produce concise required report and exact commands |
+| Missing lockfile in snapshot | Reviewer setup friction / dependency drift | Version ranges in package metadata | Commit lockfile and verify clean install |
+| Structural evidence too sparse | Harder debugging of failures | Trace contains observations/checkpoints | Consider sanitized accessibility snapshot or masked screenshot for failure-only evidence |
 
-## 5. Ordered next steps and acceptance gates
+## 6. Recommended next development steps
 
-| Order | Work | Acceptance gate |
-| --- | --- | --- |
-| 1 | Fix the minimum safety boundary before a live model run: externally configured action/effect policy, destination checks, conservative writes, sanitized persistence | Disallowed destination and risky action reach the adapter zero times; sensitive canaries never reach persisted JSON, artifact text, or screenshots |
-| 2 | Build one local synthetic member-search UI and a real model adapter; expose runnable discovery entry point | Natural-language goal produces a multi-step live UI run using real model decisions, bounded by steps/time; save model identity, run ID, decisions, observations, and result |
-| 3 | Complete compilation and typed replay together | Saved artifact uses a member-ID input, returns a validated balance output, and verifies the selected member and terminal state; replay two different IDs with model access disabled |
-| 4 | Close browser/runtime outcome gaps with focused regressions | Not-found is BUSINESS_OUTCOME; slow load waits within a bound; expired session/permission/dialog states stop deliberately; ambiguous writes execute at most once unless non-commit is proven; adapter exceptions become structured results |
-| 5 | Wire intervention into an execution coordinator | Automation pauses; operator acts in the same visible page; explicit handback is required; human activity is recorded; resume checkpoint passes before continuing from the correct step |
-| 6 | Save the complete demonstration bundle | `/evidence/` contains a generated artifact, genuine discovery log, deterministic replay log, exceptional replay log, sanitized richer failure evidence, and handoff evidence with matching run/session identifiers |
-| 7 | Finish submission documentation and verification | README commands reproduce discovery and saved-artifact replay; REPORT uses all seven headings; current-state claims agree with code; clean setup/typecheck/tests/build and the chosen coverage policy pass |
+The next work should be executed as a dependency-ordered sequence. Do not start optional generalization work until P0 is green.
 
-For steps 2-3, a read-oriented lookup with search, detail, and balance extraction keeps the live model's permitted actions small. A controlled unexpected dialog can exercise human intervention. A separate simulated commit failure can validate conservative write behavior without real financial operations.
+| Order | Priority | Development step | Concrete implementation target | Acceptance gate |
+| ---: | --- | --- | --- | --- |
+| 1 | **P0** | Minimize model-visible data | In `src/discovery/openai-discovery-model.ts`, derive a model-safe invocation view from the contract. Do not serialize raw values for sensitive host-bound inputs. The model already receives target IDs and `inputBindings`; expose only field name/type/presence where needed. | A canary `memberId` is absent from the serialized HTTP request body; transport-level unit test proves it. |
+| 2 | **P0** | Close discovery evidence leakage | In the discovery/evidence boundary, sanitize observations before persistence using contract-aware sensitive targets/outputs, or extract/register sensitive outputs before serializing the discovery trace. Treat provider context, in-memory execution state, and persisted evidence as three separate trust boundaries. | A unique balance canary does not occur anywhere under the generated run directory. Test should recursively scan files. |
+| 3 | **P0** | Validate the real provider path | Run one genuine `OpenAIDiscoveryModel` discovery against the local app. Verify Responses API parsing, structured decision format, abort behavior, target/grant compliance, and completion verification. | Manifest records `live-model`, provider/model metadata and response IDs; discovery reaches verified success. |
+| 4 | **P0** | Persist the discovered capability as the handoff boundary | Ensure live discovery always writes the compiled `artifact.json` in a stable reviewer-visible location before any replay is attempted. | Artifact parses independently with `parseCapabilityArtifact`; provenance points to the discovery run. |
+| 5 | **P0** | Prove deterministic replay from disk | Start a fresh browser context/process path, load only the saved artifact, invoke with another member ID, and prohibit model construction/import on replay path where practical. | Correct typed output; `modelCallsDuringReplay: 0`; same artifact works for at least two member IDs. |
+| 6 | **P0** | Prove runtime taxonomy | Execute `DEMO-999`/not-found plus one technical blocked scenario such as session expiry or unexpected dialog. | Evidence clearly distinguishes `BUSINESS_OUTCOME` from `RECOVERABLE`/`INTERVENTION_REQUIRED`/`FAILURE` and names the stopped step/checkpoint. |
+| 7 | **P0** | Prove human control transfer | Run the headed handoff scenario. Preserve same browser session, explicit ownership transfer, human action metadata, resume signal, resumed-state verification, and retry of only the blocked step. | Evidence shows automation pause -> human owner -> recorded manual action -> explicit handback -> automation owner -> continuation. |
+| 8 | **P0** | Create `/REPORT.md` | Use exactly the seven assignment headings. Keep it 1-3 pages. Explicitly defend external authority, predeclared target catalog, deterministic targeting/checkpoints, ambiguous-commit handling, handoff ownership, privacy limits, and cuts. | All seven exact headings present and claims match code/evidence. |
+| 9 | **P0** | Make README executable | Replace stale minimal example with exact `offline`, `discover --live`, `replay --artifact`, and `handoff --artifact` commands. Reconcile Node version text with `package.json`; remove references to nonexistent files unless added. | Reviewer can follow README from clean checkout without guessing paths or flags. |
+| 10 | **P1** | Make repository reproducible | Generate/commit `package-lock.json`; reconcile the Node engine requirement between README and `package.json`; add `.gitignore`, `.env.example`, and `LICENSE` if referenced/intended; remove `__MACOSX`; verify public-repo contents. | `npm ci` succeeds on declared Node 24 version and repo has no secrets/generated junk. |
+| 11 | **P1** | Establish a clean verification gate | Run typecheck, unit/integration tests, coverage, build, offline demo, live discovery, replay, exceptional replay, and handoff from a fresh checkout. | Record exact commands and observed pass results in README/REPORT. No unsupported coverage claim. |
+| 12 | **P2** | Improve discovery provenance, if time remains | Record which locator strategy actually resolved each target during discovery, or let the model choose among host-reviewed candidates. | Artifact/evidence can explain why a target strategy was selected without allowing the model to mint authority. |
+| 13 | **P2** | Add tenant specialization design, not infrastructure | Define base vendor capability identity, compatibility constraints, tenant override precedence, drift detection, quarantine/revalidation, and promotion semantics in the report/schema notes. | Reviewer can see how one capability safely specializes across institutions/versions without per-tenant rerecording. |
 
-The compiler may accept a small explicit binding/output specification for this one capability. General-purpose automatic parameter inference is unnecessary, provided the actual UI flow is discovered by the LLM and the artifact's authoring boundary is documented.
+### Development stop condition
 
-Completion metrics:
+Stop adding features once steps 1-11 pass. At that point the assignment's core thread is demonstrated. The optional P2 items are useful only if they improve the defense of the existing architecture without destabilizing the vertical slice.
 
-- One genuine live discovery, with reviewable evidence.
-- One saved capability replayed for at least two input values, with zero model calls and correct typed outputs.
-- One expected business outcome and one technical failure with correct classification and useful evidence.
-- One real same-session human takeover and explicit, verified handback.
-- Zero unauthorized adapter actions in policy regression cases.
-- Zero persisted sensitive canaries across all evidence formats.
-- No repeated irreversible action after an unresolved commit failure.
-- All documented validation commands have accurate, reproducible outcomes.
+## 7. Concrete submission runbook
 
-Risks and assumptions to monitor: model access, observation adequacy for target selection, checkpoint specificity, action effect misclassification, screenshot masking, session continuity, and retry behavior. Reassess the recommended local-target approach after the first guarded discovery run; that experiment will reveal the remaining integration work more accurately than further architecture expansion.
+After P0 privacy fixes, use one fixed port so the artifact's origin authority remains valid. The intended sequence should be documented and then executed approximately as follows (exact model name is environment-specific):
+
+```bash
+npm ci
+npx playwright install chromium
+npm run typecheck
+npm test
+npm run coverage
+npm run build
+
+# Reproducible no-credit integration path
+npm run demo -- offline --port 4173 --member DEMO-001
+
+# Assignment-required genuine discovery
+OPENAI_API_KEY=... MODEL_NAME=... npm run demo -- discover --live --port 4173 --member DEMO-001
+
+# Replay the artifact saved by that live run, with no model required
+npm run demo -- replay --port 4173 --member DEMO-002 --artifact evidence/<live-run>/artifact.json
+
+# Expected business outcome
+npm run demo -- replay --port 4173 --member DEMO-999 --artifact evidence/<live-run>/artifact.json
+
+# Same-session human takeover
+npm run demo -- handoff --port 4173 --member DEMO-001 --artifact evidence/<live-run>/artifact.json
+```
+
+If the live discovery command does not currently save `artifact.json` before replay, fix that before the final run. The evidence directory should make the reviewer able to trace one `runId`/capability from discovery to artifact and separate replay invocations without guessing.
+
+## 8. Submission-readiness decision
+
+**[STRONG INFERENCE, HIGH confidence] Keep the current architecture. Do not add distributed services, more adapters, a capability registry, or another framework before submission.** The load-bearing implementation is now largely present.
+
+The remaining work is concentrated and measurable:
+
+- eliminate the two sensitive-data boundary gaps;
+- perform and preserve the required genuine LLM discovery;
+- prove saved-artifact replay and handoff from that artifact;
+- produce the required report and accurate README;
+- verify a clean reproducible checkout.
+
+A submission should be considered ready only when all of these are true:
+
+- one committed **genuine** live-model discovery bundle exists;
+- its saved artifact replays with at least two input values and zero model decisions;
+- one business outcome and one intervention/failure path are preserved as evidence;
+- same-session human takeover and explicit handback are demonstrated;
+- sensitive canaries do not appear in provider-unnecessary context or persisted evidence;
+- `REPORT.md` has the seven exact required headings;
+- README commands work from a fresh checkout;
+- clean typecheck, tests, coverage policy, build, and demo commands pass under the declared Node version;
+- the public GitHub repository contains the complete deliverable and no secrets.
+
+At that point the project would present a small, coherent, defensible system that matches the assignment's stated preference for a complete vertical slice over additional breadth.

@@ -57,8 +57,8 @@ export class FakeSurfaceAdapter implements SurfaceAdapter {
     this.evidenceFailure = error;
   }
 
-  public async observe(): Promise<Observation> {
-    return { ...this.observation, timestamp: new Date().toISOString() };
+  public async observe(targets: readonly Target[] = []): Promise<Observation> {
+    return { ...this.observation, targetValues: Object.fromEntries(targets.map(target => [target.id, this.observation.signals[target.id] ?? null])), timestamp: new Date().toISOString() };
   }
 
   public async resolve(target: Target): Promise<ResolvedTarget> {

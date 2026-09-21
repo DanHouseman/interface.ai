@@ -22,7 +22,8 @@ export class DiscoveryEngine {
       return await withDeadline(request.timeoutMs, async (signal) => {
         for (let index = 1; index <= request.maxSteps; index++) {
           signal.throwIfAborted();
-          const observation = await this.surface.observe();
+          const sensitiveTargets = new Set(request.specification.contract.outputs.filter(field => field.sensitive).map(field => field.source.targetId));
+          const observation = await this.surface.observe(request.specification.targets.filter(target => sensitiveTargets.has(target.id)));
           trace.push({ kind: "OBSERVATION", step: index, observation });
           if (!observation.location || evaluateLocation(observation.location, request.specification.policy)) return fail("POLICY_DENIED", "Observed location is outside discovery authority.");
           const decision = discoveryDecisionSchema.parse(await this.model.decide({ goal: request.goal, observation, history: trace, specification: request.specification, inputs: request.inputs, signal }));
@@ -37,7 +38,9 @@ export class DiscoveryEngine {
           if (policy.disposition === "DENY") return fail(policy.code, policy.reason, policy.code === "APPROVAL_REQUIRED" ? "INTERVENTION_REQUIRED" : "FAILURE");
           if (decision.kind === "complete") {
             // Completion is a model proposal, verified against an independently declared condition.
-            if (!await evaluateCheckpoint(artifact, artifact.successCheckpoint, this.surface, request.inputs).then((value) => value.passed)) return fail("GOAL_NOT_VERIFIED", "Model completion did not satisfy the declared goal condition.", "INTERVENTION_REQUIRED");
+            const evaluation = await evaluateCheckpoint(artifact, artifact.successCheckpoint, this.surface, request.inputs);
+            trace.push({ kind: "CHECKPOINT", step: index, checkpointId: artifact.successCheckpoint.id, ...evaluation, timestamp: new Date().toISOString() });
+            if (!evaluation.passed) return fail("GOAL_NOT_VERIFIED", "Model completion did not satisfy the declared goal condition.", "INTERVENTION_REQUIRED");
             await this.evidence(trace);
             return { disposition: "SUCCESS", runId: request.runId, trace, outputs: {} };
           }

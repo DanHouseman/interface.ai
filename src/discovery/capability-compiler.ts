@@ -13,6 +13,7 @@ export class CapabilityCompiler {
     if (!steps.length) throw new Error("Cannot compile a discovery with no successful actions.");
     const artifact = capabilityArtifactSchema.parse({ ...request.specification, steps, provenance: { discoveryRunId: request.runId, createdAt: new Date().toISOString(), compilerVersion: "0.2.0" } });
     const redactor = new EvidenceRedactor(artifact, request.inputs, result.outputs);
+    redactor.sanitize(result as unknown as JsonValue);
     // Reject sensitive literals instead of silently replacing behavior with '[REDACTED]'.
     const serialized = JSON.stringify(artifact);
     if (JSON.stringify(redactor.redact(artifact as unknown as JsonValue)) !== serialized) throw new Error("SENSITIVE_ARTIFACT_LITERAL");

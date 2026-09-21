@@ -29,6 +29,7 @@ function browserMock() {
   const expired = { count: vi.fn(async () => 0) };
   const ctx = { route: vi.fn() };
   const page = {
+    evaluate: vi.fn(async (fn: (arg: readonly Target[]) => unknown, arg: readonly Target[]) => fn(arg)),
     setDefaultTimeout: vi.fn(), on: vi.fn((_name: string, callback: typeof dialog) => { dialog = callback; }),
     isClosed: vi.fn(() => false), url: vi.fn(() => "https://demo.invalid/"), title: vi.fn(async () => "Test"),
     locator: vi.fn((selector: string) => selector.includes("data-session-state") ? expired : locator),
@@ -44,6 +45,24 @@ afterEach(() => vi.unstubAllGlobals());
 // Unit execution covers the same page callbacks exercised in browser integration tests,
 // including unsupported elements and process-boundary failures unreachable through normal UI.
 describe("browser boundary failure modes", () => {
+  it("classifies sensitive CSS targets atomically and fails closed on unsupported or ambiguous classification", async () => {
+    const m = browserMock(), s = new PlaywrightSurfaceAdapter(m.page);
+    const document = { title: "Safe title", body: { innerText: "Public diagnostic" }, querySelectorAll: vi.fn((_selector: string): Element[] => []) };
+    vi.stubGlobal("document", document); vi.stubGlobal("location", { href: "https://demo.invalid/" });
+    expect((await s.observe([target()])).targetValues).toEqual({ t: null });
+    for (const element of [new Input(), new Select(), new Textarea(), new Element()]) {
+      document.querySelectorAll.mockReturnValue([element]);
+      expect((await s.observe([target()])).targetValues).toEqual({ t: "value" in element ? element.value : element.innerText });
+    }
+    document.querySelectorAll.mockImplementation(selector => selector === "#missing" ? [] : [new Element()]);
+    expect((await s.observe([target([{ kind: "selector", selector: "#missing" }, { kind: "selector", selector: "#field" }])])).targetValues).toEqual({ t: "text" });
+    document.querySelectorAll.mockReturnValue([new Element(), new Element()]);
+    await expect(s.observe([target()])).rejects.toThrow("OBSERVATION_CLASSIFICATION_AMBIGUOUS");
+    expect((await s.observe([{ ...target(), requireUniqueMatch: false }])).targetValues).toEqual({ t: "text" });
+    await expect(s.observe([target([{ kind: "visual", description: "pixel", x: 1, y: 1 }])])).rejects.toThrow("OBSERVATION_CLASSIFICATION_UNSUPPORTED");
+    m.raw.isClosed.mockReturnValue(true);
+    expect((await s.observe([target()])).targetValues).toEqual({ t: null });
+  });
   it("reads actual form values and text, submits forms/buttons, rejects non-HTML submit targets", async () => {
     const m = browserMock(), s = new PlaywrightSurfaceAdapter(m.page); const t = await s.resolve(target());
     for (const element of [new Input(), new Select(), new Textarea(), new Element()]) {

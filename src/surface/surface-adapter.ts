@@ -15,6 +15,9 @@ export interface Observation {
   readonly title?: string;
   readonly visibleText?: readonly string[];
   readonly signals: Readonly<Record<string, JsonValue>>;
+  // Values classified by declared target, captured with the observation. Live only;
+  // evidence redacts sensitive targets before serializing any part of a bundle.
+  readonly targetValues?: Readonly<Record<string, JsonValue>>;
 }
 
 // Plan: Milestone 4 + Milestone 6 | REQ-SRF-001, REQ-RPL-002
@@ -68,7 +71,7 @@ export interface EvidenceReference {
 // Core seam between recorded flow and concrete computer-use technology. Replay and discovery
 // depend on this interface, not on Playwright, accessibility APIs, or desktop automation directly.
 export interface SurfaceAdapter {
-  observe(): Promise<Observation>;
+  observe(targets?: readonly Target[]): Promise<Observation>;
   resolve(target: Target): Promise<ResolvedTarget>;
   execute(action: SurfaceAction): Promise<ActionResult>;
   captureEvidence(reason: string): Promise<EvidenceReference>;

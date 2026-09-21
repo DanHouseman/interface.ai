@@ -37,6 +37,7 @@ export interface ModelInput {
 }
 export interface DiscoveryModel { decide(input: ModelInput): Promise<DiscoveryDecision>; metadata?(): JsonValue; }
 export type DiscoveryTraceEvent =
+  | { readonly kind: "CHECKPOINT"; readonly step: number; readonly checkpointId: string; readonly passed: boolean; readonly expected: readonly string[]; readonly observed: readonly string[]; readonly timestamp: string }
   | { readonly kind: "OBSERVATION"; readonly step: number; readonly observation: Observation }
   | { readonly kind: "DECISION"; readonly step: number; readonly decision: DiscoveryDecision }
   | { readonly kind: "POLICY"; readonly step: number; readonly decision: PolicyDecision }

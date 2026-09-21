@@ -1,5 +1,64 @@
 # Implementation Progress
 
+## 09/21/2026 Completed
+
+### Milestone 15: P0 Security and Genuine Discovery Validation
+
+### Requirements
+
+-   `REQ-DISC-001...004`
+-   `REQ-ART-001...004`
+-   `REQ-RPL-001...004`
+-   `REQ-EVD-001/002`
+-   `REQ-POL-000...003`
+
+### Tests
+
+-   `test/p0-security.test.ts`: real-browser canary checks with mocked provider transport,
+    including successful and stopped discovery. These tests do not count as genuine LLM proof.
+-   `test/model-and-cli.test.ts`: outbound structured schema, nullable argument normalization,
+    safe provider error metadata, and CLI diagnostics.
+-   Last full validation: type checking and build passed; coverage ran 202 passing tests with
+    100% statements, branches, functions, and lines on 09/21/2026.
+-   Genuine discovery, a separate second-input replay, and two runtime taxonomy executions
+    were inspected independently of the mocked-provider tests.
+
+### Completed
+
+-   Kept sensitive invocation values host-bound. Discovery receives input metadata and sanitized
+    context, while the host supplies actual input values to authorized actions.
+-   Sanitized whole evidence bundles before persistence, including sensitive values copied into
+    observations, errors, and object keys. Unsupported sensitive-target classification fails closed.
+-   Added an independent host completion checkpoint and rejected sensitive artifact literals.
+-   Persisted discovery and its independently parseable capability before deterministic replay.
+-   Connected OpenAI Responses API discovery with strict structured output and safe diagnostics.
+    Corrected the provider schema to use nested `anyOf` without relaxing host decision validation.
+-   Verified the user's genuine run with `gpt-4.1-mini-2025-04-14`: four completed HTTP 200
+    responses, three UI actions, host-verified completion, parsed artifact, and successful replay.
+-   Replayed that saved artifact with `DEMO-002` in a separate execution with zero model calls.
+-   Verified `BUSINESS_OUTCOME / MEMBER_NOT_FOUND` and
+    `INTERVENTION_REQUIRED / SESSION_EXPIRED` against the same artifact and real local browser.
+    Expiry was injected through the demo scenario; both executions stopped without further actions.
+-   Scanned the two successful bundles (16 files) and runtime taxonomy records (15 files) for
+    specified member IDs, balances, canaries, and credential patterns, with zero matches.
+    This establishes the stated scan scope, not universal absence of sensitive data.
+-   Updated README installation, actual Node engine range, CLI workflows, configuration,
+    evidence interpretation, troubleshooting, and remaining validation limitations.
+
+### Evidence
+
+-   Genuine discovery: `evidence/live-validation/02def122-935d-4638-b66b-584849d5bffb/`.
+-   Second-input replay: `evidence/live-validation/282b5e47-c15a-4958-ae4d-912e129c3b56/`.
+-   Runtime outcome assertions: `evidence/runtime-taxonomy/validation.json`.
+-   Detailed chronology and validation limits: [P0_SECURITY_VALIDATION.md](./P0_SECURITY_VALIDATION.md).
+
+### Remaining Integration Work
+
+-   Complete assessment item #7: genuine headed same-session human takeover and explicit handback.
+    Existing automated HITL coverage does not establish this operator acceptance gate.
+-   Complete assessment item #8: the final `REPORT.md`.
+-   Sensitive-target classification remains limited to supported, unambiguous standard CSS selectors.
+
 ## 09/19/2026 Completed
 
 ### Milestone 14: Discovery and HITL Integration Hardening
@@ -207,9 +266,8 @@
 
 # Current Scope
 
-This implementation establishes the load bearing contracts and
-deterministic execution path needed before deeper model or browser SDK
-integration:
+This implementation establishes the load bearing contracts, genuine model discovery,
+and deterministic browser execution path:
 
 1.  A typed, runtime validated capability artifact.
 2.  A surface abstraction that deterministic replay can depend on
@@ -228,13 +286,15 @@ integration:
 The deterministic execution architecture now operates against both the fake test
 surface and a real Playwright browser surface.
 
-The implementation does **not** yet include the genuine LLM driven discovery loop
-or compilation of a successful discovery run into a reusable capability.
+Genuine OpenAI discovery, compilation into a reusable capability, and model-free replay
+with a second input are verified. Genuine operator takeover and handback remain open;
+see the 09/21/2026 entry and validation record above.
 
 # Run
 
 ``` bash
-npm install
+npm ci
+npx playwright install chromium
 npm test
 npm run typecheck
 npm run build
@@ -397,16 +457,14 @@ not part of this implementation slice.
 
 # Next Implementation
 
-1.  Implement the minimal real browser `SurfaceAdapter`.
-2.  Run the genuine LLM driven discovery spike against a live surface.
-3.  Compile the successful discovery run into a reusable capability
-    artifact.
-4.  Replay that artifact deterministically without an LLM.
-5.  Persist the discovery and replay evidence under `/evidence/`.
-6.  Implement the real same session HITL path against the browser
-    surface.
+1.  Complete genuine headed same-session human takeover and explicit handback,
+    preserving operator and resumed-execution evidence.
+2.  Write the final `REPORT.md` against the recorded acceptance evidence and limitations.
 
 # Planned Milestones
+
+The original milestone plan is retained below. Current completion and remaining
+acceptance work are recorded in the dated entries above.
 
 ## Milestone 10: Real Browser Surface
 

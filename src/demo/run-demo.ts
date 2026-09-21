@@ -9,6 +9,7 @@ import { DiscoveryEngine } from "../discovery/discovery-engine.js";
 import type { DiscoveryModel, DiscoveryRequest } from "../discovery/discovery-contracts.js";
 import type { JsonValue } from "../domain/contracts.js";
 import { writeRunBundle } from "../evidence/run-bundle.js";
+import { ExecutionError } from "../runtime/errors.js";
 import { HumanHandoffCoordinator, type InterventionRequest } from "../hitl/intervention.js";
 import { recordHumanActions } from "../hitl/browser-recorder.js";
 import { ConfigurablePolicyEvaluator } from "../policy/policy-evaluator.js";
@@ -38,6 +39,7 @@ export async function runDemo(options: DemoOptions) {
     const browser = await chromium.launch({ headless: options.headless ?? options.operator === undefined });
     try {
       const runId = randomUUID();
+      const startedAt = new Date().toISOString();
       const directory = join(options.directory, runId);
       const inputs = { memberId: options.memberId };
       let artifact: CapabilityArtifact;
@@ -54,11 +56,21 @@ export async function runDemo(options: DemoOptions) {
         const request: DiscoveryRequest = { runId, goal: "Find the supplied member and read their current savings balance from the member detail screen.", target: app.url, maxSteps: 15, timeoutMs: 120000, specification, inputs };
         const result = await new DiscoveryEngine(surface, options.model).run(request);
         if (result.disposition !== "SUCCESS") {
-          await writeRunBundle(directory, specification, inputs, {}, { discovery: result as unknown as JsonValue, manifest: { runId, discoveryMode: options.live ? "live-model" : "offline-scripted-fixture", provider: options.model.metadata?.() ?? null } });
-          throw new Error(`Discovery stopped: ${result.code}; evidence: ${directory}`);
+          await writeRunBundle(directory, specification, inputs, {}, { discovery: result as unknown as JsonValue, manifest: { runId, startedAt, completedAt: new Date().toISOString(), discoveryMode: options.live ? "live-model" : "offline-scripted-fixture", provider: options.model.metadata?.() ?? null } });
+          // Read diagnostics back through the persistence sanitizer before exposing
+          // them to the CLI. Never log a raw provider error or live observation.
+          const saved = JSON.parse(await readFile(join(directory, "manifest.json"), "utf8"));
+          const stopped = JSON.parse(await readFile(join(directory, "discovery.json"), "utf8"));
+          throw new ExecutionError("DEMO_DISCOVERY_FAILED", `Discovery stopped: ${stopped.code}; provider: ${JSON.stringify(saved.provider)}; evidence: ${directory}`);
         }
         artifact = new CapabilityCompiler().compile(request, result);
         discovery = result as unknown as JsonValue;
+        // Discovery evidence survives a subsequent replay/setup failure.
+        await writeRunBundle(directory, artifact, inputs, { ...result.outputs }, {
+          artifact: artifact as unknown as JsonValue, discovery,
+          "discovery-manifest": { runId, startedAt, completedAt: new Date().toISOString(), discoveryMode: options.live ? "live-model" : "offline-scripted-fixture", provider: options.model.metadata?.() ?? null, decisionCount: result.trace.filter(event => event.kind === "DECISION").length, verifiedCompletion: true, artifactPath: "artifact.json" },
+        });
+        parseCapabilityArtifact(JSON.parse(await readFile(join(directory, "artifact.json"), "utf8")));
         await context.close();
       }
       // A saved capability must still authorize this exact local server; no silent rebinding.
@@ -87,11 +99,10 @@ export async function runDemo(options: DemoOptions) {
         },
       } : {});
       await writeRunBundle(directory, artifact, inputs, { ...result.outputs }, {
-        artifact: artifact as unknown as JsonValue,
-        discovery,
+        ...(options.artifactPath ? { artifact: artifact as unknown as JsonValue, discovery } : {}),
         replay: result as unknown as JsonValue,
         handoff: handoffs,
-        manifest: { runId, discoveryMode: options.artifactPath ? "saved-artifact-replay" : options.live ? "live-model" : "offline-scripted-fixture", modelCallsDuringReplay: 0, target: app.url, scenario: options.scenario, provider: options.model?.metadata?.() ?? null },
+        manifest: { runId, startedAt, completedAt: new Date().toISOString(), discoveryMode: options.artifactPath ? "saved-artifact-replay" : options.live ? "live-model" : "offline-scripted-fixture", modelCallsDuringReplay: 0, target: app.url, scenario: options.scenario, provider: options.model?.metadata?.() ?? null },
       });
       return { directory, result, artifact };
     } finally { await browser.close(); }

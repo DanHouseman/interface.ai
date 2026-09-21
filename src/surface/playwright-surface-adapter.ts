@@ -57,17 +57,38 @@ export class PlaywrightSurfaceAdapter implements SurfaceAdapter {
     });
   }
 
-  public async observe(): Promise<Observation> {
+  public async observe(targets: readonly Target[] = []): Promise<Observation> {
     if (this.page.isClosed()) {
       this.state = "expired";
       return {
         surfaceKind: "browser",
         timestamp: new Date().toISOString(),
         signals: { session: "expired" },
+        targetValues: Object.fromEntries(targets.map(target => [target.id, null])),
       };
     }
 
-    const visibleText = (await this.page.locator("body").innerText().catch(() => ""))
+    // Classify sensitive target values and all page text in one browser task.
+    // The current browser evidence classifier supports reviewed CSS targets;
+    // unsupported classification fails closed instead of persisting raw page text.
+    const snapshot = targets.length ? await this.page.evaluate((declared) => {
+      const targetValues: Record<string, string | null> = {};
+      for (const target of declared) {
+        targetValues[target.id] = null;
+        for (const strategy of target.strategies) {
+          if (strategy.kind !== "selector") throw new Error("OBSERVATION_CLASSIFICATION_UNSUPPORTED");
+          const matches = document.querySelectorAll(strategy.selector);
+          if (matches.length > 1 && target.requireUniqueMatch) throw new Error("OBSERVATION_CLASSIFICATION_AMBIGUOUS");
+          const element = matches[0];
+          if (element) {
+            targetValues[target.id] = element instanceof HTMLInputElement || element instanceof HTMLSelectElement || element instanceof HTMLTextAreaElement ? element.value : (element as HTMLElement).innerText;
+            break;
+          }
+        }
+      }
+      return { text: document.body.innerText, targetValues, title: document.title, location: location.href };
+    }, targets) : { text: await this.page.locator("body").innerText().catch(() => ""), targetValues: {}, title: await this.page.title(), location: this.page.url() };
+    const visibleText = snapshot.text
       .split(/\r?\n/)
       .map((value) => value.trim())
       .filter((value) => value.length > 0);
@@ -75,14 +96,16 @@ export class PlaywrightSurfaceAdapter implements SurfaceAdapter {
     return {
       surfaceKind: "browser",
       timestamp: new Date().toISOString(),
-      location: this.page.url(),
-      title: await this.page.title(),
+      location: snapshot.location,
+      title: snapshot.title,
       visibleText,
+      targetValues: snapshot.targetValues,
       signals: {
         session: this.state,
         owner: this.owner,
         sessionId: this.sessionId,
-        controls: await this.page.locator("body").ariaSnapshot(),
+        // With classified targets, avoid a second text snapshot from a later UI state.
+        controls: targets.length ? "See declared targets and visibleText" : await this.page.locator("body").ariaSnapshot(),
       },
     };
   }
