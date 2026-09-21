@@ -201,3 +201,11 @@ Audit findings originate in the direct npm `chromium` dependency and its depende
 Clean-run evidence was copied unchanged into `evidence/clean-validation/`. Authenticated discovery, exceptional scenarios, and manual handoff were not rerun in the clean export; their previously inspected executions remain separate evidence. No remote CI or entirely fresh-machine browser installation is claimed.
 
 Prepared `evidence/review-package-2026-09-21.zip` with selected genuine discovery/replay, runtime-taxonomy, both handoff attempts, clean-install run evidence, and documentation. Per-file SHA-256 hashes and package instructions are included. Generated evidence is scanned for specified synthetic IDs, balances, canaries, and credential patterns; documentation intentionally contains example commands. Original evidence is not rewritten, so historical absolute paths remain. The archive is local and gitignored, and has not been sent or uploaded.
+
+## Dependency audit remediation verified: 2026-09-21
+
+Removed the unused direct npm `chromium` dependency and its allowScripts entry. All application/test browser imports use `playwright`. The regenerated lockfile removes the standalone package's vulnerable tree; no application source changes were required.
+
+Copied the updated manifest and lockfile into the isolated committed-source export. This follow-up tests revision `30181831` plus the dependency changes, not a new committed revision. Under Node 24.21.0, `npm ci`, `npm audit --json`, `npm run typecheck`, `npm run build`, and `npm run coverage` passed. Audit reported zero vulnerabilities. Coverage passed 202 tests across 16 files with 100% statements (972/972), branches (716/716), functions (170/170), and lines (768/768).
+
+`npm run demo -- offline --port 4173 --member DEMO-001 --evidence evidence/dependency-validation` returned SUCCESS, run `f0811e3c-41e1-4b82-a53c-d623c51fab69`. This remains an offline scripted discovery test, not a new authenticated provider call. Evidence was copied unchanged into the working repository's ignored directory. The reviewer ZIP was refreshed with current documentation and this evidence, then rescanned and integrity-checked. Earlier audit findings are retained above as historical records and are resolved by this change.

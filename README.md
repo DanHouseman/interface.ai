@@ -96,7 +96,7 @@ Additional commands:
 
 Compiled JavaScript is written to `dist/`. Coverage enforces 100% statements, branches, functions, and lines for the configured source scope. Tests and offline demos do not make authenticated model calls.
 
-The last recorded full validation on September 21, 2026 passed type checking, build, and all 202 tests through `npm run coverage`, with all four coverage metrics at 100%. The same checks also passed after a clean-source dependency installation under Node 24.21.0. `npm audit` currently reports three high-severity findings through the standalone `chromium` dependency; remediation remains open. See [P0 security validation](./P0_SECURITY_VALIDATION.md) for the execution record and limitations.
+The last recorded full validation on September 21, 2026 passed type checking, build, and all 202 tests through `npm run coverage`, with all four coverage metrics at 100%. The same checks also passed after a clean-source dependency installation under Node 24.21.0. The unused standalone `chromium` dependency was removed; a subsequent clean install and `npm audit` report zero vulnerabilities. Browser execution continues through Playwright. See [P0 security validation](./P0_SECURITY_VALIDATION.md) for the execution record and limitations.
 
 ## Run the demo
 

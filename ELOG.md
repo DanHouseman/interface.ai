@@ -2,6 +2,23 @@
 
 ## 09/21/2026 Completed
 
+### Milestone 18: Dependency Audit Remediation
+
+### Completed
+
+-   Removed unused standalone `chromium` and its installation-script permission. Source and
+    tests use Playwright's Chromium API; no application code or browser behavior was changed.
+-   Regenerated the lockfile, removing the vulnerable standalone dependency tree.
+-   Reinstalled from the updated lockfile in the isolated source export under Node 24.21.0.
+    `npm audit --json` passed with zero reported vulnerabilities.
+
+### Tests
+
+-   Typecheck, build, and all 202 tests passed; all four configured coverage metrics remain 100%.
+-   Offline browser discovery/replay succeeded: `evidence/dependency-validation/f0811e3c-41e1-4b82-a53c-d623c51fab69/`.
+-   Refreshed the local reviewer package and verified per-file hashes and ZIP integrity.
+    No external delivery or commit was performed.
+
 ### Milestone 17: Clean Installation and Evidence Packaging
 
 ### Completed
@@ -502,7 +519,7 @@ not part of this implementation slice.
 
 # Next Implementation
 
-1.  Resolve npm audit findings through the standalone `chromium` dependency.
+1.  Review and commit the validated dependency and documentation changes.
 2.  Deliver the prepared reviewer evidence package through an explicitly authorized channel.
 
 # Planned Milestones

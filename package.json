@@ -13,7 +13,6 @@
     "demo": "npm run build && node --env-file-if-exists=.env --input-type=module -e \"import('./dist/src/demo/cli.js').then(m => m.main(process.argv.slice(1))).catch(() => { console.error('Demo stopped. Check configuration and evidence; no raw error is printed.'); process.exitCode = 1; })\" --"
   },
   "dependencies": {
-    "chromium": "^3.0.3",
     "zod": "^4.1.5"
   },
   "devDependencies": {
@@ -27,7 +26,6 @@
     "node": "^24.3.0"
   },
   "allowScripts": {
-    "fsevents@2.3.3": true,
-    "chromium": true
+    "fsevents@2.3.3": true
   }
 }
