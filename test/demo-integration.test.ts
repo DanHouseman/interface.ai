@@ -64,3 +64,48 @@ describe("offline full-system acceptance", () => {
     await expect(reserved.close()).rejects.toThrow();
   }, 15000);
 });
+
+// Real browser, deliberately scripted model/operator: this is not genuine human/provider evidence.
+describe("discovery-to-operator integration", () => {
+  it("keeps the stopped discovery page alive through handback, compiles and replays", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "discovery-operator-"));
+    const scripted = new ScriptedDemoModel(); let blocked = false;
+    const model: import("../src/discovery/discovery-contracts.js").DiscoveryModel = {
+      async decide(input) {
+        if (!blocked && input.history.some(event => event.kind === "ACTION")) { blocked = true; return { kind: "stuck", rationale: "Operator must release the session" }; }
+        return scripted.decide();
+      },
+    };
+    const operator = vi.fn(async (page: import("playwright").Page, request: import("../src/hitl/intervention.js").InterventionRequest) => {
+      expect(request.reason).toBe("DISCOVERY_STUCK"); expect(request.observation.signals.owner).toBe("human");
+      expect(await page.locator("#member").inputValue()).toBe("DEMO-001");
+      await page.locator("#unblock").click();
+      await page.waitForTimeout(30);
+    });
+    const run = await runDemo({ directory, memberId: "DEMO-001", port: 0, scenario: "discovery-handoff", live: false, headless: true, model, operator });
+    expect(run.result.disposition).toBe("SUCCESS"); expect(operator).toHaveBeenCalledTimes(1);
+    expect(run.artifact.steps.map(step => step.id)).toEqual(["discovery-1", "discovery-3", "discovery-4"]);
+    const handoffs = JSON.parse(await readFile(join(run.directory, "discovery-handoff.json"), "utf8"));
+    expect(handoffs.map((event: { phase: string }) => event.phase)).toEqual(["paused", "handback", "resumed"]);
+    expect(handoffs[0]).toMatchObject({ owner: "human", state: "paused" });
+    expect(handoffs[1].actions).toContainEqual(expect.objectContaining({ description: "click BUTTON" }));
+    expect(handoffs[2]).toMatchObject({ owner: "automation", state: "active", verified: true });
+    expect(JSON.stringify(handoffs)).not.toContain("DEMO-001");
+    expect(JSON.parse(await readFile(join(run.directory, "discovery.json"), "utf8")).trace).toContainEqual(expect.objectContaining({ kind: "HANDOFF", decision: "continue" }));
+  }, 15000);
+  it.each(["cancel", "unverified", "exhausted"])("persists %s handoff and does not compile an unsuccessful discovery", async mode => {
+    const directory = await mkdtemp(join(tmpdir(), "discovery-operator-stop-"));
+    const run = runDemo({ directory, memberId: "DEMO-001", port: 0, scenario: "discovery-handoff", live: false, headless: true,
+      model: { async decide() { return { kind: "stuck", rationale: "Waiting" }; } },
+      operator: async page => {
+        if (mode === "cancel") throw new Error("INTERVENTION_CANCELLED");
+        if (mode === "exhausted") await page.locator("#unblock").evaluate(element => (element as HTMLElement).click());
+      },
+    });
+    await expect(run).rejects.toThrow(mode === "exhausted" ? "DISCOVERY_STUCK" : "DISCOVERY_FAILED");
+    const [id] = await readdir(directory); const files = await readdir(join(directory, id!));
+    expect(files).not.toContain("artifact.json"); expect(files).not.toContain("replay.json");
+    const handoff = await readFile(join(directory, id!, "discovery-handoff.json"), "utf8");
+    expect(handoff).toContain(mode === "exhausted" ? '"resumed"' : '"failed"');
+  }, 15000);
+});

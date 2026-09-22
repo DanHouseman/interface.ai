@@ -1,0 +1,51 @@
+{
+  "runId": "02def122-935d-4638-b66b-584849d5bffb",
+  "startedAt": "2026-09-21T14:18:35.958Z",
+  "completedAt": "2026-09-21T14:18:45.031Z",
+  "discoveryMode": "live-model",
+  "provider": {
+    "provider": "openai",
+    "model": "gpt-4.1-mini",
+    "calls": [
+      {
+        "model": "gpt-4.1-mini-2025-04-14",
+        "startedAt": "2026-09-21T14:18:36.314Z",
+        "completedAt": "2026-09-21T14:18:39.047Z",
+        "httpStatus": 200,
+        "requestId": "req_ff1c73b56bb048188d56963b2a218ccd",
+        "responseId": "resp_0b24284450720c07016ab13cbcb7b887d1822d5ab428d5926b",
+        "status": "completed"
+      },
+      {
+        "model": "gpt-4.1-mini-2025-04-14",
+        "startedAt": "2026-09-21T14:18:39.187Z",
+        "completedAt": "2026-09-21T14:18:41.332Z",
+        "httpStatus": 200,
+        "requestId": "req_38fd7d0bd80840f28b75a93d92915b14",
+        "responseId": "resp_0c5790dcddbb1da2016ab13cbf5bb087d1a589d12ed3590746",
+        "status": "completed"
+      },
+      {
+        "model": "gpt-4.1-mini-2025-04-14",
+        "startedAt": "2026-09-21T14:18:41.462Z",
+        "completedAt": "2026-09-21T14:18:42.809Z",
+        "httpStatus": 200,
+        "requestId": "req_595c0194d8504a0cbbd8a2affa9206a1",
+        "responseId": "resp_0cdf76af5e3d34fb016ab13cc18fa087d1bf9063bd86ad07bb",
+        "status": "completed"
+      },
+      {
+        "model": "gpt-4.1-mini-2025-04-14",
+        "startedAt": "2026-09-21T14:18:42.865Z",
+        "completedAt": "2026-09-21T14:18:44.932Z",
+        "httpStatus": 200,
+        "requestId": "req_8ea72e36a9c943abbbc7a397567932fd",
+        "responseId": "resp_0852d8bdee757909016ab13cc31d5487d19d1421c5f04425d4",
+        "status": "completed"
+      }
+    ]
+  },
+  "decisionCount": 4,
+  "verifiedCompletion": true,
+  "artifactPath": "artifact.json"
+}

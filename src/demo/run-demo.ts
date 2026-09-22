@@ -10,7 +10,7 @@ import type { DiscoveryModel, DiscoveryRequest } from "../discovery/discovery-co
 import type { JsonValue } from "../domain/contracts.js";
 import { writeRunBundle } from "../evidence/run-bundle.js";
 import { ExecutionError } from "../runtime/errors.js";
-import { HumanHandoffCoordinator, type InterventionRequest } from "../hitl/intervention.js";
+import { HumanHandoffCoordinator, type HumanActionRecord, type InterventionRequest } from "../hitl/intervention.js";
 import { recordHumanActions } from "../hitl/browser-recorder.js";
 import { ConfigurablePolicyEvaluator } from "../policy/policy-evaluator.js";
 import { DeterministicReplayEngine } from "../replay/replay-engine.js";
@@ -27,7 +27,7 @@ export interface DemoOptions {
   readonly artifactPath?: string;
   readonly live: boolean;
   readonly headless?: boolean;
-  readonly operator?: (page: Page, request: InterventionRequest) => Promise<void>;
+  readonly operator?: (page: Page, request: InterventionRequest, signal?: AbortSignal) => Promise<void>;
 }
 
 // Milestone 11-13 | Assignment §3.1-3.6, §6 | REQ-DISC-004, REQ-OPS-002/003
@@ -52,11 +52,19 @@ export async function runDemo(options: DemoOptions) {
         const surface = new PlaywrightSurfaceAdapter(page, { evidenceDirectory: join(directory, "discovery") });
         const specification = demoSpecification(app.url);
         await surface.guard(specification.policy);
-        await page.goto(app.url);
+        await page.goto(options.scenario === "discovery-handoff" ? `${app.url}?scenario=handoff` : app.url);
+        const discoveryActions = await recordHumanActions(page, surface, "local-operator");
+        const discoveryHandoffs: JsonValue[] = [];
         const request: DiscoveryRequest = { runId, goal: "Find the supplied member and read their current savings balance from the member detail screen.", target: app.url, maxSteps: 15, timeoutMs: 120000, specification, inputs };
-        const result = await new DiscoveryEngine(surface, options.model).run(request);
+        const result = await new DiscoveryEngine(surface, options.model).run(request, options.operator ? {
+          intervene: async (stopped, signal) => {
+            await operatorHandoff(page, surface, options.operator!, discoveryActions, discoveryHandoffs,
+              { invocationId: runId, capabilityId: specification.capability.id, stepId: `discovery-${stopped.step}`, reason: stopped.code }, signal);
+            return stopped.canContinue ? "continue" : "stop";
+          },
+        } : {});
         if (result.disposition !== "SUCCESS") {
-          await writeRunBundle(directory, specification, inputs, {}, { discovery: result as unknown as JsonValue, manifest: { runId, startedAt, completedAt: new Date().toISOString(), discoveryMode: options.live ? "live-model" : "offline-scripted-fixture", provider: options.model.metadata?.() ?? null } });
+          await writeRunBundle(directory, specification, inputs, {}, { discovery: result as unknown as JsonValue, "discovery-handoff": discoveryHandoffs, manifest: { runId, startedAt, completedAt: new Date().toISOString(), discoveryMode: options.live ? "live-model" : "offline-scripted-fixture", provider: options.model.metadata?.() ?? null } });
           // Read diagnostics back through the persistence sanitizer before exposing
           // them to the CLI. Never log a raw provider error or live observation.
           const saved = JSON.parse(await readFile(join(directory, "manifest.json"), "utf8"));
@@ -67,7 +75,7 @@ export async function runDemo(options: DemoOptions) {
         discovery = result as unknown as JsonValue;
         // Discovery evidence survives a subsequent replay/setup failure.
         await writeRunBundle(directory, artifact, inputs, { ...result.outputs }, {
-          artifact: artifact as unknown as JsonValue, discovery,
+          artifact: artifact as unknown as JsonValue, discovery, "discovery-handoff": discoveryHandoffs,
           "discovery-manifest": { runId, startedAt, completedAt: new Date().toISOString(), discoveryMode: options.live ? "live-model" : "offline-scripted-fixture", provider: options.model.metadata?.() ?? null, decisionCount: result.trace.filter(event => event.kind === "DECISION").length, verifiedCompletion: true, artifactPath: "artifact.json" },
         });
         parseCapabilityArtifact(JSON.parse(await readFile(join(directory, "artifact.json"), "utf8")));
@@ -82,19 +90,11 @@ export async function runDemo(options: DemoOptions) {
       await page.goto(`${app.url}?scenario=${encodeURIComponent(options.scenario)}`);
       const actions = await recordHumanActions(page, surface, "local-operator");
       const handoffs: JsonValue[] = [];
-      const coordinator = new HumanHandoffCoordinator(surface, {
-        async route(request) { handoffs.push({ id: request.id, reason: request.reason, stepId: request.stepId! }); },
-        async waitForResume() {
-          // Only supplied for explicit headed handoff runs; absence cannot auto-resume.
-          await options.operator!(page, { id: runId, invocationId: runId, capabilityId: artifact.capability.id, reason: "Release the session, then explicitly resume.", observation: await surface.observe(), evidence: await surface.captureEvidence("operator") });
-          return { operatorId: "local-operator", actions };
-        },
-      });
       const invocation = { invocationId: runId, capabilityId: artifact.capability.id, capabilityVersion: artifact.capability.version, inputs };
       const result = await new DeterministicReplayEngine(surface, new ConfigurablePolicyEvaluator(demoSpecification(app.url).policy)).replay(artifact, invocation, options.operator ? {
         intervene: async (step, stopped) => {
-          const handoff = await coordinator.intervene({ invocationId: runId, capabilityId: artifact.capability.id, stepId: step.id, reason: stopped.code }, (observation) => observation.visibleText?.includes("Ready") === true);
-          handoffs.push({ operatorId: handoff.human.operatorId, actions: [...handoff.human.actions] as unknown as JsonValue });
+          await operatorHandoff(page, surface, options.operator!, actions, handoffs,
+            { invocationId: runId, capabilityId: artifact.capability.id, stepId: step.id, reason: stopped.code });
           return { decision: "retry", approved: false };
         },
       } : {});
@@ -107,4 +107,34 @@ export async function runDemo(options: DemoOptions) {
       return { directory, result, artifact };
     } finally { await browser.close(); }
   } finally { await app.close(); }
+}
+
+// Preserve the live page and record control transfer without recording typed values.
+async function operatorHandoff(
+  page: Page, surface: PlaywrightSurfaceAdapter, operator: NonNullable<DemoOptions["operator"]>,
+  actions: HumanActionRecord[], events: JsonValue[],
+  input: { invocationId: string; capabilityId: string; stepId: string; reason: string }, signal?: AbortSignal,
+): Promise<void> {
+  const firstAction = actions.length;
+  let routed!: InterventionRequest;
+  const coordinator = new HumanHandoffCoordinator(surface, {
+    async route(request) {
+      routed = request;
+      events.push({ timestamp: new Date().toISOString(), phase: "paused", id: request.id, stepId: input.stepId, reason: input.reason,
+        owner: await surface.getSessionOwner(), state: await surface.getSessionState(), evidence: request.evidence as unknown as JsonValue });
+    },
+    async waitForResume() {
+      await operator(page, routed, signal);
+      const human = { operatorId: "local-operator", actions: actions.slice(firstAction) };
+      events.push({ timestamp: new Date().toISOString(), phase: "handback", id: routed.id, ...human } as unknown as JsonValue);
+      return human;
+    },
+  });
+  try {
+    await coordinator.intervene(input, observation => observation.visibleText?.includes("Ready") === true, signal);
+    events.push({ timestamp: new Date().toISOString(), phase: "resumed", id: routed.id, verified: true, owner: await surface.getSessionOwner(), state: await surface.getSessionState() });
+  } catch (error) {
+    events.push({ timestamp: new Date().toISOString(), phase: "failed", stepId: input.stepId, code: "HANDOFF_FAILED", actions: actions.slice(firstAction) as unknown as JsonValue });
+    throw error;
+  }
 }

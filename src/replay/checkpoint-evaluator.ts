@@ -1,6 +1,7 @@
 import type { CapabilityArtifact } from "../artifact/capability-schema.js";
 import type { JsonValue } from "../domain/contracts.js";
 import type { SurfaceAdapter } from "../surface/surface-adapter.js";
+import { EvidenceRedactor } from "../evidence/redactor.js";
 import { errorMessage } from "../runtime/errors.js";
 
 export interface CheckpointEvaluation { readonly passed: boolean; readonly expected: readonly string[]; readonly observed: readonly string[]; }
@@ -23,7 +24,12 @@ export async function evaluateCheckpoint(
 }
 
 async function sample(artifact: CapabilityArtifact, checkpoint: CapabilityArtifact["successCheckpoint"], surface: SurfaceAdapter, inputs: Readonly<Record<string, JsonValue>>): Promise<CheckpointEvaluation> {
-  const observation = await surface.observe();
+  // Register sensitive live values before projecting observations into trace strings.
+  // Extraction can fail later, so result.outputs must not be the privacy dependency.
+  const sensitiveTargets = new Set(artifact.contract.outputs.filter(field => field.sensitive).map(field => field.source.targetId));
+  const observation = await surface.observe(artifact.targets.filter(target => sensitiveTargets.has(target.id)));
+  const redactor = new EvidenceRedactor(artifact, inputs);
+  redactor.sanitize(observation as unknown as JsonValue);
   const expected: string[] = [], observed: string[] = [];
   const results: boolean[] = [];
   for (const predicate of checkpoint.all) {
@@ -50,6 +56,7 @@ async function sample(artifact: CapabilityArtifact, checkpoint: CapabilityArtifa
           if (predicate.kind === "target_present") results.push(true);
           else {
             const result = await surface.execute({ type: "read", target: resolved });
+            redactor.sanitize({ targetValues: { [predicate.targetId]: result.observedValue ?? null } });
             observed.push(JSON.stringify(result));
             results.push(result.ok && inputs[predicate.input] !== undefined && result.observedValue === inputs[predicate.input]);
           }
@@ -68,7 +75,7 @@ async function sample(artifact: CapabilityArtifact, checkpoint: CapabilityArtifa
       }
     }
   }
-  return { passed: results.every(Boolean), expected, observed };
+  return { passed: results.every(Boolean), expected: expected.map(value => redactor.redactString(value)), observed: observed.map(value => redactor.redactString(value)) };
 }
 function safeRegexTest(pattern: string, value: string): boolean {
   try { return new RegExp(pattern).test(value); } catch { return false; }

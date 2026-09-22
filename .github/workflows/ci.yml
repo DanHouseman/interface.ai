@@ -57,3 +57,6 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Verify curated submission evidence
+        run: node scripts/verify-submission-evidence.mjs

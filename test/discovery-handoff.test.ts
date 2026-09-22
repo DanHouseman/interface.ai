@@ -143,3 +143,60 @@ describe("explicit human handback", () => {
     const wait = router.waitForResume("r"); const assertion = expect(wait).rejects.toThrow("INTERVENTION_CANCELLED"); router.cancel("r"); await assertion;
   });
 });
+
+// Audit F2: continuation keeps the same run, remaining budget, and external authority.
+describe("discovery intervention continuation", () => {
+  it.each(["stuck", "precondition", "completion"])("reobserves after %s handback without repeating its prefix", async kind => {
+    const s = discoverySurface(), req = request();
+    const blocked: DiscoveryDecision = kind === "stuck" ? { kind: "stuck", rationale: "Operator needed" } : kind === "precondition" ? act("click", "find") : complete;
+    const m = model([act("type", "member"), blocked, act("click", "find"), complete]);
+    // Only remove readiness after the first action so the prefix remains real.
+    const execute = s.execute.bind(s);
+    vi.spyOn(s, "execute").mockImplementation(async action => { const result = await execute(action); if (action.type === "type") s.setObservation({ visibleText: ["Waiting"] }); return result; });
+    const intervene = vi.fn(async () => { s.setObservation({ visibleText: ["Member Search", "Ready"] }); return "continue" as const; });
+    const result = await new DiscoveryEngine(s, m).run(req, { intervene });
+    expect(result.disposition).toBe("SUCCESS"); expect(intervene).toHaveBeenCalledTimes(1);
+    expect(s.actions.filter(action => action.type === "type")).toHaveLength(1);
+    expect(result.trace).toContainEqual(expect.objectContaining({ kind: "HANDOFF", step: 2, decision: "continue" }));
+    expect(m.decide.mock.calls).toHaveLength(4);
+  });
+  it("accepts an operator stop without continuing", async () => {
+    const s = discoverySurface(), m = model([{ kind: "stuck", rationale: "Stop" }, act("click", "find")]);
+    const result = await new DiscoveryEngine(s, m).run(request(), { intervene: async () => "stop" });
+    expect(result).toMatchObject({ code: "DISCOVERY_STUCK" }); expect(m.decide).toHaveBeenCalledTimes(1); expect(s.actions).toHaveLength(0);
+  });
+  it.each(["budget", "approval", "uncertain"])("does not bypass %s after takeover", async kind => {
+    const s = discoverySurface(), req = request();
+    let decisions: DiscoveryDecision[] = [act("click", "find"), complete];
+    if (kind === "budget") { req.maxSteps = 1; decisions = [act("wait", undefined, 0), complete]; }
+    if (kind === "approval") req.specification.grants = { find: { actionTypes: ["click"], effect: "irreversible_write" } };
+    if (kind === "uncertain") s.queueActionResult({ ok: false, error: { code: "UNCERTAIN", message: "Unknown", recoverable: true, ambiguousCommit: true } });
+    const intervene = vi.fn(async () => "continue" as const), m = model(decisions);
+    const result = await new DiscoveryEngine(s, m).run(req, { intervene });
+    expect(result.disposition).toBe("INTERVENTION_REQUIRED"); expect(intervene).toHaveBeenCalledWith(expect.objectContaining({ canContinue: false }), expect.any(AbortSignal));
+    expect(result.trace).toContainEqual(expect.objectContaining({ kind: "HANDOFF", decision: "stop" }));
+    expect(m.decide).toHaveBeenCalledTimes(1); expect(s.actions.length).toBe(kind === "approval" ? 0 : 1);
+  });
+  it.each(["stuck", "precondition", "completion"])("does not renew the last-step budget after %s", async kind => {
+    const s = discoverySurface(); s.setObservation({ visibleText: ["Waiting"] });
+    const decision: DiscoveryDecision = kind === "stuck" ? { kind: "stuck", rationale: "Need operator" } : kind === "precondition" ? act("click", "find") : complete;
+    const intervene = vi.fn(async () => "continue" as const);
+    const result = await new DiscoveryEngine(s, model([decision])).run({ ...request(), maxSteps: 1 }, { intervene });
+    expect(result.disposition).toBe("INTERVENTION_REQUIRED"); expect(intervene).toHaveBeenCalledWith(expect.objectContaining({ canContinue: false }), expect.any(AbortSignal));
+  });
+  it("rejects late handback after the original deadline without issuing another action", async () => {
+    let handback!: (value: "continue") => void;
+    const s = discoverySurface(), m = model([{ kind: "stuck", rationale: "Waiting" }, act("click", "find")]);
+    const running = new DiscoveryEngine(s, m).run({ ...request(), timeoutMs: 20 }, { intervene: async () => new Promise(resolve => { handback = resolve; }) });
+    expect(await running).toMatchObject({ code: "DISCOVERY_TIMEOUT" });
+    handback("continue"); await new Promise(resolve => setTimeout(resolve, 5));
+    expect(s.actions).toHaveLength(0); expect(m.decide).toHaveBeenCalledTimes(1);
+  });
+  it("does not restore ownership if cancellation arrives during human control", async () => {
+    const controller = new AbortController(), s = discoverySurface();
+    const coordinator = new HumanHandoffCoordinator(s, { async route() {}, async waitForResume() { controller.abort(); return { operatorId: "human", actions: [] }; } });
+    await expect(coordinator.intervene({ invocationId: "i", capabilityId: "c", reason: "x" }, () => true, controller.signal)).rejects.toMatchObject({ name: "AbortError" });
+    expect(await s.getSessionOwner()).toBe("human");
+    await expect(new HumanHandoffCoordinator(discoverySurface(), {} as never).intervene({ invocationId: "i", capabilityId: "c", reason: "x" }, () => true, controller.signal)).rejects.toMatchObject({ name: "AbortError" });
+  });
+});

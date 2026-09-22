@@ -13,10 +13,11 @@ export interface InterventionRouter { route(request: InterventionRequest): Promi
 export class HumanHandoffCoordinator {
   private active = false;
   public constructor(private readonly surface: SurfaceAdapter, private readonly router: InterventionRouter) {}
-  public async intervene(input: { invocationId: string; capabilityId: string; stepId?: string; reason: string }, verify: (observation: Observation) => boolean) {
+  public async intervene(input: { invocationId: string; capabilityId: string; stepId?: string; reason: string }, verify: (observation: Observation) => boolean, signal?: AbortSignal) {
     if (this.active) throw new Error("INTERVENTION_CONFLICT");
     this.active = true;
     try {
+      signal?.throwIfAborted();
       await this.surface.pause();
       const observation = await this.surface.observe();
       const evidence = await this.surface.captureEvidence("intervention");
@@ -25,6 +26,7 @@ export class HumanHandoffCoordinator {
       const human = await this.router.waitForResume(request.id);
       const resumedObservation = await this.surface.observe();
       if (!verify(resumedObservation)) throw new Error("RESUME_CHECKPOINT_FAILED");
+      signal?.throwIfAborted();
       await this.surface.resume();
       if (await this.surface.getSessionOwner() !== "automation" || await this.surface.getSessionState() !== "active") throw new Error("CONTROL_TRANSFER_FAILED");
       return { request, human, resumedObservation };

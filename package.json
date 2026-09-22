@@ -10,7 +10,8 @@
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
-    "demo": "npm run build && node --env-file-if-exists=.env --input-type=module -e \"import('./dist/src/demo/cli.js').then(m => m.main(process.argv.slice(1))).catch(() => { console.error('Demo stopped. Check configuration and evidence; no raw error is printed.'); process.exitCode = 1; })\" --"
+    "demo": "npm run build && node --env-file-if-exists=.env --input-type=module -e \"import('./dist/src/demo/cli.js').then(m => m.main(process.argv.slice(1))).catch(() => { console.error('Demo stopped. Check configuration and evidence; no raw error is printed.'); process.exitCode = 1; })\" --",
+    "verify:evidence": "npm run build && node scripts/verify-submission-evidence.mjs"
   },
   "dependencies": {
     "zod": "^4.1.5"

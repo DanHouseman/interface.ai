@@ -5,13 +5,13 @@ import { evaluateCheckpoint } from "../replay/checkpoint-evaluator.js";
 import { withDeadline } from "../runtime/deadline.js";
 import { ExecutionError } from "../runtime/errors.js";
 import type { SurfaceAction, SurfaceAdapter } from "../surface/surface-adapter.js";
-import { discoveryDecisionSchema, type DiscoveryModel, type DiscoveryRequest, type DiscoveryResult, type DiscoveryTraceEvent } from "./discovery-contracts.js";
+import { discoveryDecisionSchema, type DiscoveryModel, type DiscoveryOptions, type DiscoveryRequest, type DiscoveryResult, type DiscoveryTraceEvent } from "./discovery-contracts.js";
 
 // Milestone 5, 7, 9 | Assignment §3.1, §3.4-3.5 | REQ-DISC-001..004
 export class DiscoveryEngine {
   private running = false;
   public constructor(private readonly surface: SurfaceAdapter, private readonly model: DiscoveryModel) {}
-  public async run(request: DiscoveryRequest): Promise<DiscoveryResult> {
+  public async run(request: DiscoveryRequest, options: DiscoveryOptions = {}): Promise<DiscoveryResult> {
     const trace: DiscoveryTraceEvent[] = [];
     const fail = (code: string, message: string, disposition: "FAILURE" | "INTERVENTION_REQUIRED" = "FAILURE"): DiscoveryResult => ({ disposition, runId: request.runId, code, message, trace });
     if (this.running) return fail("RUN_CONFLICT", "Discovery is already running.");
@@ -20,7 +20,16 @@ export class DiscoveryEngine {
       if (!Number.isInteger(request.maxSteps) || request.maxSteps < 1 || !Number.isFinite(request.timeoutMs) || request.timeoutMs <= 0) return fail("INVALID_REQUEST", "Positive step and timeout bounds are required.");
       if (evaluateLocation(request.target, request.specification.policy)) return fail("POLICY_DENIED", "Entry point is outside discovery authority.");
       return await withDeadline(request.timeoutMs, async (signal) => {
-        for (let index = 1; index <= request.maxSteps; index++) {
+        const intervene = async (code: string, step: number, canContinue: boolean): Promise<boolean> => {
+          if (!options.intervene) return false;
+          const requested = await options.intervene({ code, step, canContinue }, signal);
+          signal.throwIfAborted();
+          // A handback cannot renew the budget, grant approval, or retry an uncertain action.
+          const decision = canContinue && requested === "continue" ? "continue" : "stop";
+          trace.push({ kind: "HANDOFF", step, code, decision, timestamp: new Date().toISOString() });
+          return decision === "continue";
+        };
+        discoveryLoop: for (let index = 1; index <= request.maxSteps; index++) {
           signal.throwIfAborted();
           const sensitiveTargets = new Set(request.specification.contract.outputs.filter(field => field.sensitive).map(field => field.source.targetId));
           const observation = await this.surface.observe(request.specification.targets.filter(target => sensitiveTargets.has(target.id)));
@@ -29,23 +38,35 @@ export class DiscoveryEngine {
           const decision = discoveryDecisionSchema.parse(await this.model.decide({ goal: request.goal, observation, history: trace, specification: request.specification, inputs: request.inputs, signal }));
           signal.throwIfAborted();
           trace.push({ kind: "DECISION", step: index, decision });
-          if (decision.kind === "stuck") return fail("DISCOVERY_STUCK", decision.rationale, "INTERVENTION_REQUIRED");
+          if (decision.kind === "stuck") {
+            if (await intervene("DISCOVERY_STUCK", index, index < request.maxSteps)) continue;
+            return fail("DISCOVERY_STUCK", decision.rationale, "INTERVENTION_REQUIRED");
+          }
           const step = decision.kind === "act" ? this.materialize(request, decision, index) : readStep(index);
           const artifact = capabilityArtifactSchema.parse({ ...request.specification, steps: [step], provenance: { discoveryRunId: request.runId, createdAt: new Date().toISOString(), compilerVersion: "0.2.0" } });
           const context: ExecutionContext = { invocationId: request.runId, capabilityId: artifact.capability.id, capabilityVersion: artifact.capability.version, inputs: request.inputs, ...(request.authorization ? { authorization: request.authorization } : {}) };
           const policy = new ConfigurablePolicyEvaluator(request.specification.policy).evaluate({ artifact, step, context, observation });
           trace.push({ kind: "POLICY", step: index, decision: policy });
-          if (policy.disposition === "DENY") return fail(policy.code, policy.reason, policy.code === "APPROVAL_REQUIRED" ? "INTERVENTION_REQUIRED" : "FAILURE");
+          if (policy.disposition === "DENY") {
+            if (policy.code === "APPROVAL_REQUIRED") await intervene(policy.code, index, false);
+            return fail(policy.code, policy.reason, policy.code === "APPROVAL_REQUIRED" ? "INTERVENTION_REQUIRED" : "FAILURE");
+          }
           if (decision.kind === "complete") {
             // Completion is a model proposal, verified against an independently declared condition.
             const evaluation = await evaluateCheckpoint(artifact, artifact.successCheckpoint, this.surface, request.inputs);
             trace.push({ kind: "CHECKPOINT", step: index, checkpointId: artifact.successCheckpoint.id, ...evaluation, timestamp: new Date().toISOString() });
-            if (!evaluation.passed) return fail("GOAL_NOT_VERIFIED", "Model completion did not satisfy the declared goal condition.", "INTERVENTION_REQUIRED");
+            if (!evaluation.passed) {
+              if (await intervene("GOAL_NOT_VERIFIED", index, index < request.maxSteps)) continue;
+              return fail("GOAL_NOT_VERIFIED", "Model completion did not satisfy the declared goal condition.", "INTERVENTION_REQUIRED");
+            }
             await this.evidence(trace);
             return { disposition: "SUCCESS", runId: request.runId, trace, outputs: {} };
           }
           for (const checkpoint of step.preconditions) {
-            if (!(await evaluateCheckpoint(artifact, checkpoint, this.surface, request.inputs)).passed) return fail("PRECONDITION_FAILED", "Discovery requires a verified state before acting.", "INTERVENTION_REQUIRED");
+            if (!(await evaluateCheckpoint(artifact, checkpoint, this.surface, request.inputs)).passed) {
+              if (await intervene("PRECONDITION_FAILED", index, index < request.maxSteps)) continue discoveryLoop;
+              return fail("PRECONDITION_FAILED", "Discovery requires a verified state before acting.", "INTERVENTION_REQUIRED");
+            }
           }
           const target = step.action.targetId ? await this.surface.resolve(artifact.targets.find((item) => item.id === step.action.targetId)!) : undefined;
           const value = step.action.value?.kind === "input" ? request.inputs[step.action.value.input] : step.action.value?.value;
@@ -65,9 +86,11 @@ export class DiscoveryEngine {
           if (!result.ok) {
             if (result.error?.recoverable && !result.error.ambiguousCommit && step.action.effect === "read") continue;
             await this.evidence(trace);
+            await intervene(result.error?.code ?? "ACTION_FAILED", index, false);
             return fail(result.error?.code ?? "ACTION_FAILED", "Discovery action could not safely complete.", "INTERVENTION_REQUIRED");
           }
         }
+        await intervene("MAX_STEPS", request.maxSteps, false);
         return fail("MAX_STEPS", "Discovery reached its step limit.", "INTERVENTION_REQUIRED");
       });
     } catch (error) {

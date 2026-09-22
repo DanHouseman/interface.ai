@@ -3,7 +3,10 @@ dist/
 .env
 coverage/
 artifacts/runtime/
-/evidence/
 
 .env.*
 !.env.example
+
+# Keep generated runs local; track only reviewed submission evidence.
+/evidence/*
+!/evidence/submission/

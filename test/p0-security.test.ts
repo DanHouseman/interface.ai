@@ -13,7 +13,10 @@ import { writeRunBundle } from "../src/evidence/run-bundle.js";
 import { EvidenceRedactor } from "../src/evidence/redactor.js";
 import type { JsonValue } from "../src/domain/contracts.js";
 import type { ModelInput } from "../src/discovery/discovery-contracts.js";
-import { request } from "./helpers.js";
+import { DeterministicReplayEngine } from "../src/replay/replay-engine.js";
+import { ConfigurablePolicyEvaluator } from "../src/policy/policy-evaluator.js";
+import { evaluateCheckpoint } from "../src/replay/checkpoint-evaluator.js";
+import { artifact as makeArtifact, request } from "./helpers.js";
 
 const inputCanary = "SENSITIVE_MEMBER_CANARY_7F31A9";
 const outputCanary = "SENSITIVE_BALANCE_CANARY_91C2EF";
@@ -145,5 +148,48 @@ describe("P0 evidence persistence boundary", () => {
     for (const result of [null, [], "bad", {}, { observedValue: null }]) {
       expect(() => new EvidenceRedactor(spec, {}).sanitize({ kind: "ACTION", capabilityStep: { action: { targetId: "balance" } }, result })).not.toThrow();
     }
+  });
+});
+
+// Audit F1: sensitive state must be safe even when replay never returns outputs.
+describe("failed replay checkpoint privacy", () => {
+  it.each(["wrong-type", "missing-output", "failed-checkpoint", "partial-output"] as const)("keeps browser canaries out of all files after %s", async scenario => {
+    const directory = await mkdtemp(join(tmpdir(), "replay-canary-"));
+    const browser = await chromium.launch({ headless: true });
+    try {
+      const page = await browser.newPage();
+      await page.route("https://demo.invalid/", route => route.fulfill({ contentType: "text/html", body: `<p>Public diagnostic</p><span id="balance">${outputCanary}</span>` }));
+      await page.goto("https://demo.invalid/");
+      const surface = new PlaywrightSurfaceAdapter(page, { evidenceDirectory: join(directory, "snapshots") });
+      const artifact = makeArtifact();
+      artifact.targets = [{ id: "balance", description: "Private balance", requireUniqueMatch: true, strategies: [{ kind: "selector", selector: "#balance" }] }];
+      artifact.contract.inputs = [{ name: "memberId", description: "Member", type: "string", required: true, sensitive: true }];
+      artifact.contract.outputs = [{ name: "balance", description: "Balance", type: scenario === "wrong-type" ? "number" : "string", required: true, sensitive: true, source: { targetId: "balance" } }];
+      artifact.successCheckpoint = { id: "done", description: "Public result", all: [{ kind: "text_visible", text: scenario === "failed-checkpoint" ? "Absent confirmation" : "Public diagnostic" }] };
+      if (scenario === "partial-output") artifact.contract.outputs.push({ name: "later", description: "Missing later output", type: "string", sensitive: false, required: true, source: { adapterSignal: "absent" } });
+      if (scenario === "missing-output") {
+        const execute = surface.execute.bind(surface);
+        vi.spyOn(surface, "execute").mockImplementation(action => action.type === "read" ? Promise.resolve({ ok: true }) : execute(action));
+      }
+      expect(await page.locator("#balance").innerText()).toBe(outputCanary);
+      const result = await new DeterministicReplayEngine(surface, new ConfigurablePolicyEvaluator()).replay(artifact, {
+        invocationId: "privacy", capabilityId: artifact.capability.id, capabilityVersion: artifact.capability.version, inputs: { memberId: inputCanary },
+      });
+      expect(result.disposition).toBe("FAILURE");
+      expect(result.code).toBe(scenario === "wrong-type" ? "INVALID_OUTPUT_TYPE" : scenario === "failed-checkpoint" ? "SUCCESS_CHECKPOINT_FAILED" : "MISSING_OUTPUT");
+      expect(result.outputs).toBeUndefined();
+      expect(JSON.stringify(result.trace)).not.toContain(outputCanary);
+      expect(JSON.stringify(result.trace)).toContain("Public diagnostic");
+      await writeRunBundle(directory, artifact, { memberId: inputCanary }, {}, { replay: result as unknown as JsonValue });
+      expect((await scan(directory)).length).toBeGreaterThan(1);
+    } finally { await browser.close(); }
+  });
+  it("redacts sensitive signals without changing the checkpoint boolean", async () => {
+    const artifact = makeArtifact();
+    artifact.contract.outputs = [{ name: "flag", description: "Private flag", type: "boolean", required: true, sensitive: true, source: { adapterSignal: "privateFlag" } }];
+    const surface = new FakeSurfaceAdapter(); surface.setObservation({ signals: { privateFlag: false } });
+    const evaluation = await evaluateCheckpoint(artifact, { id: "flag", description: "flag", all: [{ kind: "adapter_signal", name: "privateFlag", expected: true }] }, surface);
+    expect(evaluation.passed).toBe(false);
+    expect(evaluation.observed).toEqual(["adapter_signal:privateFlag:[REDACTED]"]);
   });
 });

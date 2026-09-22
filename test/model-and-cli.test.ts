@@ -83,6 +83,11 @@ describe("OpenAI provider contract without API calls", () => {
   it.each([[], [{ type: "message" }], [{ type: "message", content: [{ type: "output_text", text: "not JSON" }] }], [{ type: "message", content: [{ type: "output_text", text: '{"kind":"invented"}' }] } ]].map(output => [output]))("rejects empty/refused/malformed decisions", async output => {
     await expect(new OpenAIDiscoveryModel("test", "model", vi.fn<typeof fetch>().mockResolvedValue(response(output))).decide(input())).rejects.toThrow();
   });
+  it("offline fixture does not skip an action after a failed attempt or handback", async () => {
+    const model = new ScriptedDemoModel();
+    const context: ModelInput = { ...input(), history: [{ kind: "ACTION", step: 1, capabilityStep: artifact().steps[0]!, result: { ok: false } }] };
+    expect(await model.decide(context)).toMatchObject({ actionType: "type" });
+  });
   it("offline fixture explicitly exhausts without a provider", async () => {
     const model = new ScriptedDemoModel(); for (let i = 0; i < 4; i++) await model.decide(); expect((await model.decide()).kind).toBe("stuck");
   });
@@ -110,6 +115,12 @@ describe("credit-safe CLI", () => {
   it("constructs a live model only with opt-in and configuration; does not call it", async () => {
     const execute = executor(); await expect(main(["discover", "--live"], {}, execute, io())).rejects.toThrow("required");
     await main(["discover", "--live"], { OPENAI_API_KEY: "test-only", MODEL_NAME: "test-model" }, execute, io()); expect(execute.mock.calls[0]![0].model).toBeInstanceOf(OpenAIDiscoveryModel);
+  });
+  it("allows explicit operator routing during live discovery without changing billing opt-in", async () => {
+    const execute = executor();
+    await main(["discover", "--live", "--operator", "--scenario", "discovery-handoff"], { OPENAI_API_KEY: "test", MODEL_NAME: "model" }, execute, io());
+    expect(execute.mock.calls[0]![0]).toMatchObject({ scenario: "discovery-handoff", operator: expect.any(Function), live: true });
+    await expect(main(["discover", "--operator"], {}, execute, io())).rejects.toThrow("requires --live");
   });
   it("requires explicit handback in the headed operator command", async () => {
     const terminal = io(); const execute = executor(); await main(["handoff", "--artifact", "example.json"], {}, execute, terminal);

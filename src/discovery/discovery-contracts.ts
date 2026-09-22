@@ -36,7 +36,16 @@ export interface ModelInput {
   readonly signal: AbortSignal;
 }
 export interface DiscoveryModel { decide(input: ModelInput): Promise<DiscoveryDecision>; metadata?(): JsonValue; }
+export interface DiscoveryIntervention {
+  readonly code: string;
+  readonly step: number;
+  readonly canContinue: boolean;
+}
+export interface DiscoveryOptions {
+  readonly intervene?: (stopped: DiscoveryIntervention, signal: AbortSignal) => Promise<"continue" | "stop">;
+}
 export type DiscoveryTraceEvent =
+  | { readonly kind: "HANDOFF"; readonly step: number; readonly code: string; readonly decision: "continue" | "stop"; readonly timestamp: string }
   | { readonly kind: "CHECKPOINT"; readonly step: number; readonly checkpointId: string; readonly passed: boolean; readonly expected: readonly string[]; readonly observed: readonly string[]; readonly timestamp: string }
   | { readonly kind: "OBSERVATION"; readonly step: number; readonly observation: Observation }
   | { readonly kind: "DECISION"; readonly step: number; readonly decision: DiscoveryDecision }

@@ -15,6 +15,8 @@ export { DiscoveryEngine } from "./discovery/discovery-engine.js";
 export { CapabilityCompiler } from "./discovery/capability-compiler.js";
 export type {
   DiscoveryDecision,
+  DiscoveryIntervention,
+  DiscoveryOptions,
   DiscoveryModel,
   DiscoveryRequest,
   DiscoveryResult,

@@ -8,6 +8,16 @@ The core design principle is:
 
 Discovery can use a model to learn a workflow. Replay is instead governed by a versioned artifact, explicit policy, verified checkpoints, bounded recovery, and auditable evidence.
 
+## Assignment review status
+
+The latest [assignment assessment](./PROJECT_ASSESSMEMNT.md) supersedes earlier completion claims. The demonstrated discovery/replay workflow works, but the application is **not fully aligned or submission-ready**:
+
+- A real-browser audit reproduced sensitive balance text persisting in a failed replay when output extraction rejects its type. Successful-path redaction tests do not cover this failure.
+- Replay supports real human takeover; stopped discovery currently closes its browser instead of routing the live session to an operator.
+- Required evidence exists locally but is not tracked in the reviewed revision. The current working-tree `.gitignore` no longer excludes it; this does not publish or approve all generated files.
+
+See [INTERVIEW.md](./INTERVIEW.md) for concise decision rationales, alternatives, limitations, and likely interview questions. The local reviewer ZIP predates this audit and is not the assignment submission format; the assignment requests a public repository URL, not a ZIP.
+
 ## What this repository implements
 
 - A Zod-validated, portable capability artifact format
@@ -184,7 +194,7 @@ Run bundles contain `manifest.json`, `replay.json`, the saved `artifact.json` wh
 
 These are local validation records; see [P0_SECURITY_VALIDATION.md](./P0_SECURITY_VALIDATION.md) for provenance, assertions, and exact scan scope. Mocked-provider tests are recorded separately from genuine discovery. Session expiry is an injected local demo condition.
 
-Sensitive invocation values stay host-bound; the model receives input metadata. Evidence is sanitized before persistence, and structural snapshots omit page text, values, attributes, and URLs. Sensitive-target classification currently requires supported, unambiguous standard CSS selectors and fails closed otherwise. Scans for specified values and credential patterns do not prove universal absence of sensitive data. Default `evidence/runs/` is gitignored; review custom evidence directories before sharing.
+Sensitive invocation values stay host-bound; the model receives input metadata. Bundle sanitization runs before persistence, and structural snapshots omit page text, values, attributes, and URLs. However, failed replay output extraction can leave sensitive values in flattened checkpoint strings; the latest audit identifies this unresolved privacy defect. Sensitive-target classification currently requires supported, unambiguous standard CSS selectors and fails closed otherwise. Scans for specified values and credential patterns do not prove universal absence of sensitive data. At the time of this reassessment, the working-tree `.gitignore` does not exclude `evidence/`. Review and explicitly select sanitized submission records; do not bulk-add generated runs or archives.
 
 ## Troubleshooting
 
@@ -231,7 +241,9 @@ src/
 test/          Unit and end-to-end vertical-slice tests
 ELOG.md        Dated implementation progress and architectural decisions
 P0_SECURITY_VALIDATION.md  Security checks and genuine runtime evidence
-PROJECT_ASSESSMENT.md      Assessment and remaining acceptance work
+PROJECT_ASSESSMEMNT.md     Current assignment audit (requested filename)
+PROJECT_ASSESSMENT.md      Historical assessment
+INTERVIEW.md   Decision defenses, tradeoffs, and interview preparation
 REPORT.md      Seven-section design report and implementation limits
 notes.md       Engineering notebook and design rationale
 ```
