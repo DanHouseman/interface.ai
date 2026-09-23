@@ -33,6 +33,9 @@ export class PlaywrightSurfaceAdapter implements SurfaceAdapter {
   private evidenceSequence = 0;
   private readonly evidenceDirectory: string;
   private readonly sessionId = randomUUID();
+  // Evidence identifiers must not reuse a session identifier that redaction removes
+  // from observations, otherwise persisted references no longer match files on disk.
+  private readonly evidenceId = randomUUID();
   private activeAction: Promise<ActionResult> | undefined;
   private dialogSeen = false;
   private readonly timeoutMs: number;
@@ -197,7 +200,7 @@ export class PlaywrightSurfaceAdapter implements SurfaceAdapter {
     // Milestone 9 | Assignment §3.4-3.5 | REQ-EVD-002/003
     // Persist a structural DOM snapshot instead of raw pixels or text. Text, values,
     // attributes, URLs and credentials cannot leak through this richer evidence path.
-    const id = `browser-evidence-${this.sessionId}-${this.evidenceSequence++}`;
+    const id = `browser-evidence-${this.evidenceId}-${this.evidenceSequence++}`;
     const path = resolvePath(this.evidenceDirectory, `${id}.json`);
     const structure = await this.page.locator("body *").evaluateAll((elements) => elements.map((element) => ({
       tag: element.tagName.toLowerCase(),

@@ -1,0 +1,7 @@
+{
+  "mode": "real-browser-privacy-regression",
+  "artifactMutation": "Sensitive balance output type changed to number in an otherwise unchanged genuine artifact; not a new provider discovery.",
+  "expectedCode": "INVALID_OUTPUT_TYPE",
+  "sensitiveBalanceAbsent": true,
+  "outputsAbsent": true
+}

@@ -6,13 +6,13 @@
     {
       "kind": "STEP_STARTED",
       "stepId": "discovery-1",
-      "timestamp": "2026-09-21T14:18:45.569Z"
+      "timestamp": "2026-09-23T00:30:54.513Z"
     },
     {
       "kind": "SESSION_STATE",
       "stepId": "discovery-1",
       "state": "active",
-      "timestamp": "2026-09-21T14:18:45.580Z"
+      "timestamp": "2026-09-23T00:30:54.524Z"
     },
     {
       "kind": "POLICY_DECISION",
@@ -20,7 +20,7 @@
       "disposition": "ALLOW",
       "code": "POLICY_ALLOWED",
       "reason": "Action and destination are within configured authority.",
-      "timestamp": "2026-09-21T14:18:45.586Z"
+      "timestamp": "2026-09-23T00:30:54.543Z"
     },
     {
       "kind": "CHECKPOINT",
@@ -34,7 +34,7 @@
       "observed": [
         "Synthetic Member Desk | Local demonstration. All member data is fictional. | Ready | Member ID | Find member"
       ],
-      "timestamp": "2026-09-21T14:18:45.589Z"
+      "timestamp": "2026-09-23T00:30:54.544Z"
     },
     {
       "kind": "CHECKPOINT",
@@ -48,14 +48,14 @@
       "observed": [
         "Synthetic Member Desk | Local demonstration. All member data is fictional. | Ready | Member ID | Find member"
       ],
-      "timestamp": "2026-09-21T14:18:45.592Z"
+      "timestamp": "2026-09-23T00:30:54.544Z"
     },
     {
       "kind": "TARGET_RESOLVED",
       "stepId": "discovery-1",
       "targetId": "member",
       "strategyKind": "selector",
-      "timestamp": "2026-09-21T14:18:45.602Z"
+      "timestamp": "2026-09-23T00:30:54.546Z"
     },
     {
       "kind": "POLICY_DECISION",
@@ -63,14 +63,14 @@
       "disposition": "ALLOW",
       "code": "POLICY_ALLOWED",
       "reason": "Action and destination are within configured authority.",
-      "timestamp": "2026-09-21T14:18:45.606Z"
+      "timestamp": "2026-09-23T00:30:54.549Z"
     },
     {
       "kind": "ACTION_RESULT",
       "stepId": "discovery-1",
       "attempt": 1,
       "ok": true,
-      "timestamp": "2026-09-21T14:18:45.613Z"
+      "timestamp": "2026-09-23T00:30:54.553Z"
     },
     {
       "kind": "CHECKPOINT",
@@ -84,7 +84,7 @@
       "observed": [
         "Synthetic Member Desk | Local demonstration. All member data is fictional. | Ready | Member ID | Find member"
       ],
-      "timestamp": "2026-09-21T14:18:45.617Z"
+      "timestamp": "2026-09-23T00:30:54.555Z"
     },
     {
       "kind": "CHECKPOINT",
@@ -98,23 +98,23 @@
       "observed": [
         "Synthetic Member Desk | Local demonstration. All member data is fictional. | Ready | Member ID | Find member"
       ],
-      "timestamp": "2026-09-21T14:18:45.620Z"
+      "timestamp": "2026-09-23T00:30:54.555Z"
     },
     {
       "kind": "STEP_COMPLETED",
       "stepId": "discovery-1",
-      "timestamp": "2026-09-21T14:18:45.620Z"
+      "timestamp": "2026-09-23T00:30:54.555Z"
     },
     {
       "kind": "STEP_STARTED",
       "stepId": "discovery-2",
-      "timestamp": "2026-09-21T14:18:45.620Z"
+      "timestamp": "2026-09-23T00:30:54.555Z"
     },
     {
       "kind": "SESSION_STATE",
       "stepId": "discovery-2",
       "state": "active",
-      "timestamp": "2026-09-21T14:18:45.620Z"
+      "timestamp": "2026-09-23T00:30:54.556Z"
     },
     {
       "kind": "POLICY_DECISION",
@@ -122,7 +122,7 @@
       "disposition": "ALLOW",
       "code": "POLICY_ALLOWED",
       "reason": "Action and destination are within configured authority.",
-      "timestamp": "2026-09-21T14:18:45.623Z"
+      "timestamp": "2026-09-23T00:30:54.560Z"
     },
     {
       "kind": "CHECKPOINT",
@@ -136,7 +136,7 @@
       "observed": [
         "Synthetic Member Desk | Local demonstration. All member data is fictional. | Ready | Member ID | Find member"
       ],
-      "timestamp": "2026-09-21T14:18:45.625Z"
+      "timestamp": "2026-09-23T00:30:54.561Z"
     },
     {
       "kind": "CHECKPOINT",
@@ -150,7 +150,7 @@
       "observed": [
         "Synthetic Member Desk | Local demonstration. All member data is fictional. | Ready | Member ID | Find member"
       ],
-      "timestamp": "2026-09-21T14:18:45.627Z"
+      "timestamp": "2026-09-23T00:30:54.561Z"
     },
     {
       "kind": "CHECKPOINT",
@@ -164,27 +164,27 @@
       "observed": [
         "Synthetic Member Desk | Local demonstration. All member data is fictional. | Ready | Member ID | Find member"
       ],
-      "timestamp": "2026-09-21T14:18:45.629Z"
+      "timestamp": "2026-09-23T00:30:54.562Z"
     },
     {
       "kind": "EVIDENCE",
       "stepId": "discovery-2",
       "evidence": {
-        "id": "browser-evidence-0b983275-6329-46a8-847a-d23b6fb36c15-0",
+        "id": "browser-evidence-2ce0fec8-676a-4d4c-9000-069d5ef56388-0",
         "kind": "snapshot",
-        "path": "replay/browser-evidence-0b983275-6329-46a8-847a-d23b6fb36c15-0.json",
+        "path": "replay/browser-evidence-2ce0fec8-676a-4d4c-9000-069d5ef56388-0.json",
         "metadata": {
           "format": "structural-dom-v1"
         }
       },
-      "timestamp": "2026-09-21T14:18:45.640Z"
+      "timestamp": "2026-09-23T00:30:54.573Z"
     },
     {
       "kind": "TARGET_RESOLVED",
       "stepId": "discovery-2",
       "targetId": "find",
       "strategyKind": "selector",
-      "timestamp": "2026-09-21T14:18:45.641Z"
+      "timestamp": "2026-09-23T00:30:54.574Z"
     },
     {
       "kind": "POLICY_DECISION",
@@ -192,14 +192,14 @@
       "disposition": "ALLOW",
       "code": "POLICY_ALLOWED",
       "reason": "Action and destination are within configured authority.",
-      "timestamp": "2026-09-21T14:18:45.643Z"
+      "timestamp": "2026-09-23T00:30:54.577Z"
     },
     {
       "kind": "ACTION_RESULT",
       "stepId": "discovery-2",
       "attempt": 1,
       "ok": true,
-      "timestamp": "2026-09-21T14:18:45.650Z"
+      "timestamp": "2026-09-23T00:30:54.591Z"
     },
     {
       "kind": "CHECKPOINT",
@@ -213,7 +213,7 @@
       "observed": [
         "Synthetic Member Desk | Local demonstration. All member data is fictional. | Ready | Member ID | Find member | Loading"
       ],
-      "timestamp": "2026-09-21T14:18:45.652Z"
+      "timestamp": "2026-09-23T00:30:54.592Z"
     },
     {
       "kind": "CHECKPOINT",
@@ -227,23 +227,23 @@
       "observed": [
         "Synthetic Member Desk | Local demonstration. All member data is fictional. | Ready | Member ID | Find member | Loading"
       ],
-      "timestamp": "2026-09-21T14:18:45.655Z"
+      "timestamp": "2026-09-23T00:30:54.593Z"
     },
     {
       "kind": "STEP_COMPLETED",
       "stepId": "discovery-2",
-      "timestamp": "2026-09-21T14:18:45.655Z"
+      "timestamp": "2026-09-23T00:30:54.593Z"
     },
     {
       "kind": "STEP_STARTED",
       "stepId": "discovery-3",
-      "timestamp": "2026-09-21T14:18:45.655Z"
+      "timestamp": "2026-09-23T00:30:54.593Z"
     },
     {
       "kind": "SESSION_STATE",
       "stepId": "discovery-3",
       "state": "active",
-      "timestamp": "2026-09-21T14:18:45.655Z"
+      "timestamp": "2026-09-23T00:30:54.594Z"
     },
     {
       "kind": "POLICY_DECISION",
@@ -251,7 +251,7 @@
       "disposition": "ALLOW",
       "code": "POLICY_ALLOWED",
       "reason": "Action and destination are within configured authority.",
-      "timestamp": "2026-09-21T14:18:45.657Z"
+      "timestamp": "2026-09-23T00:30:54.596Z"
     },
     {
       "kind": "CHECKPOINT",
@@ -265,7 +265,7 @@
       "observed": [
         "Synthetic Member Desk | Local demonstration. All member data is fictional. | Ready | Member ID | Find member | Loading"
       ],
-      "timestamp": "2026-09-21T14:18:45.659Z"
+      "timestamp": "2026-09-23T00:30:54.597Z"
     },
     {
       "kind": "CHECKPOINT",
@@ -279,14 +279,14 @@
       "observed": [
         "Synthetic Member Desk | Local demonstration. All member data is fictional. | Ready | Member ID | Find member | Loading"
       ],
-      "timestamp": "2026-09-21T14:18:45.661Z"
+      "timestamp": "2026-09-23T00:30:54.597Z"
     },
     {
       "kind": "TARGET_RESOLVED",
       "stepId": "discovery-3",
       "targetId": "open",
       "strategyKind": "selector",
-      "timestamp": "2026-09-21T14:18:45.685Z"
+      "timestamp": "2026-09-23T00:30:54.625Z"
     },
     {
       "kind": "POLICY_DECISION",
@@ -294,14 +294,14 @@
       "disposition": "ALLOW",
       "code": "POLICY_ALLOWED",
       "reason": "Action and destination are within configured authority.",
-      "timestamp": "2026-09-21T14:18:45.687Z"
+      "timestamp": "2026-09-23T00:30:54.628Z"
     },
     {
       "kind": "ACTION_RESULT",
       "stepId": "discovery-3",
       "attempt": 1,
       "ok": true,
-      "timestamp": "2026-09-21T14:18:45.716Z"
+      "timestamp": "2026-09-23T00:30:54.658Z"
     },
     {
       "kind": "CHECKPOINT",
@@ -315,7 +315,7 @@
       "observed": [
         "Synthetic Member Desk | Local demonstration. All member data is fictional. | Ready | Member ID | Find member | Open member | Member detail | Member [REDACTED] | Savings balance [REDACTED]"
       ],
-      "timestamp": "2026-09-21T14:18:45.719Z"
+      "timestamp": "2026-09-23T00:30:54.658Z"
     },
     {
       "kind": "CHECKPOINT",
@@ -329,12 +329,12 @@
       "observed": [
         "Synthetic Member Desk | Local demonstration. All member data is fictional. | Ready | Member ID | Find member | Open member | Member detail | Member [REDACTED] | Savings balance [REDACTED]"
       ],
-      "timestamp": "2026-09-21T14:18:45.722Z"
+      "timestamp": "2026-09-23T00:30:54.659Z"
     },
     {
       "kind": "STEP_COMPLETED",
       "stepId": "discovery-3",
-      "timestamp": "2026-09-21T14:18:45.722Z"
+      "timestamp": "2026-09-23T00:30:54.659Z"
     },
     {
       "kind": "CHECKPOINT",
@@ -352,19 +352,19 @@
         "target:selected:selector",
         "{\"ok\":true,\"observedValue\":\"[REDACTED]\"}"
       ],
-      "timestamp": "2026-09-21T14:18:45.735Z"
+      "timestamp": "2026-09-23T00:30:54.666Z"
     },
     {
       "kind": "EVIDENCE",
       "evidence": {
-        "id": "browser-evidence-0b983275-6329-46a8-847a-d23b6fb36c15-1",
+        "id": "browser-evidence-2ce0fec8-676a-4d4c-9000-069d5ef56388-1",
         "kind": "snapshot",
-        "path": "replay/browser-evidence-0b983275-6329-46a8-847a-d23b6fb36c15-1.json",
+        "path": "replay/browser-evidence-2ce0fec8-676a-4d4c-9000-069d5ef56388-1.json",
         "metadata": {
           "format": "structural-dom-v1"
         }
       },
-      "timestamp": "2026-09-21T14:18:45.737Z"
+      "timestamp": "2026-09-23T00:30:54.668Z"
     },
     {
       "kind": "POLICY_DECISION",
@@ -372,21 +372,21 @@
       "disposition": "ALLOW",
       "code": "POLICY_ALLOWED",
       "reason": "Action and destination are within configured authority.",
-      "timestamp": "2026-09-21T14:18:45.740Z"
+      "timestamp": "2026-09-23T00:30:54.671Z"
     },
     {
       "kind": "TARGET_RESOLVED",
       "stepId": "output:balance",
       "targetId": "balance",
       "strategyKind": "selector",
-      "timestamp": "2026-09-21T14:18:45.741Z"
+      "timestamp": "2026-09-23T00:30:54.673Z"
     },
     {
       "kind": "ACTION_RESULT",
       "stepId": "output:balance",
       "attempt": 1,
       "ok": true,
-      "timestamp": "2026-09-21T14:18:45.744Z"
+      "timestamp": "2026-09-23T00:30:54.675Z"
     }
   ],
   "outputs": {

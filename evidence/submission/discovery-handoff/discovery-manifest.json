@@ -1,0 +1,10 @@
+{
+  "runId": "578cd282-8cf4-4ba1-81e6-16fde6528edc",
+  "startedAt": "2026-09-23T00:39:16.620Z",
+  "completedAt": "2026-09-23T00:39:49.580Z",
+  "discoveryMode": "offline-scripted-fixture",
+  "provider": null,
+  "decisionCount": 5,
+  "verifiedCompletion": true,
+  "artifactPath": "artifact.json"
+}

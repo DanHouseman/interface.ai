@@ -1,0 +1,45 @@
+[
+  {
+    "timestamp": "2026-09-23T00:40:49.758Z",
+    "phase": "paused",
+    "id": "a3ba2674-bb03-45f8-b506-a7de8a826aa6",
+    "stepId": "discovery-2",
+    "reason": "PRECONDITION_FAILED",
+    "owner": "human",
+    "state": "paused",
+    "evidence": {
+      "id": "browser-evidence-0a316dbe-3145-437a-b350-0763516e8ce5-2",
+      "kind": "snapshot",
+      "path": "replay/browser-evidence-0a316dbe-3145-437a-b350-0763516e8ce5-2.json",
+      "metadata": {
+        "format": "structural-dom-v1"
+      }
+    }
+  },
+  {
+    "timestamp": "2026-09-23T00:40:49.799Z",
+    "phase": "handback",
+    "id": "a3ba2674-bb03-45f8-b506-a7de8a826aa6",
+    "operatorId": "local-operator",
+    "actions": [
+      {
+        "operatorId": "local-operator",
+        "timestamp": "2026-09-23T00:40:49.767Z",
+        "description": "change INPUT"
+      },
+      {
+        "operatorId": "local-operator",
+        "timestamp": "2026-09-23T00:40:49.768Z",
+        "description": "click BUTTON"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-09-23T00:40:49.815Z",
+    "phase": "resumed",
+    "id": "a3ba2674-bb03-45f8-b506-a7de8a826aa6",
+    "verified": true,
+    "owner": "automation",
+    "state": "active"
+  }
+]

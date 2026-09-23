@@ -1,24 +1,54 @@
 # Interface.ai Computer-Use Automation
 
-A TypeScript proof of concept for discovering computer-use workflows once, compiling them into typed capability artifacts, and replaying them deterministically without an LLM in the production execution path.
+## TLDR;
 
-The core design principle is:
+From a fresh checkout, run the setup script:
+
+```bash
+npm run setup
+```
+
+The setup script outlines the plan, shows each step in cyan, shows each command in blue parentheses, updates the active step in place, marks passes in green, marks failures in red, and stops on the first failure. Under the hood it runs these steps in order:
+
+```bash
+npm ci
+npx playwright install chromium
+npm run typecheck
+npm test
+npm run coverage
+npm run build
+npm run verify:evidence
+```
+
+Then start the GUI:
+
+```bash
+npm run gui
+```
+
+Open the local URL printed by `npm run gui` to use the browser control panel. To run setup and launch the GUI in one command, use `npm run setup -- --launch-gui`. To preview the installation steps without running them, use `npm run setup -- --print-only`. For terminal-only use, run `npm run demo -- --help`, then run one of the demo commands below.
+
+This project uses an LLM to learn a task in a browser, saves the steps as a reusable capability, and runs that capability again with new inputs without calling the model.
+
+The main design rule is:
 
 > The model may discover behavior, but it does not define authority.
 
-Discovery can use a model to learn a workflow. Replay is instead governed by a versioned artifact, explicit policy, verified checkpoints, bounded recovery, and auditable evidence.
+The model proposes actions during discovery. The application checks those actions against its policy and verifies the result. Replay follows the saved steps, checks progress, and stops or asks for help when it cannot safely continue.
 
-## Assignment review status
+## Current status
 
-The latest [assignment assessment](./PROJECT_ASSESSMEMNT.md) supersedes earlier completion claims. The demonstrated discovery/replay workflow works, but the application is **not fully aligned or submission-ready**:
+The latest fixes prevent sensitive values from appearing in failed-replay diagnostics, let a human take over during discovery, and make the saved evidence verifiable from a checkout.
 
-- A real-browser audit reproduced sensitive balance text persisting in a failed replay when output extraction rejects its type. Successful-path redaction tests do not cover this failure.
-- Replay supports real human takeover; stopped discovery currently closes its browser instead of routing the live session to an operator.
-- Required evidence exists locally but is not tracked in the reviewed revision. The current working-tree `.gitignore` no longer excludes it; this does not publish or approve all generated files.
+The [included evidence](./evidence/submission/README.md) covers a real OpenAI discovery run, replay, human takeover, and failure cases. Each run identifies whether it used a model, a scripted fixture, or an automated operator. Publishing the repository, checking remote CI, and submitting the link are still separate delivery steps.
 
-See [INTERVIEW.md](./INTERVIEW.md) for concise decision rationales, alternatives, limitations, and likely interview questions. The local reviewer ZIP predates this audit and is not the assignment submission format; the assignment requests a public repository URL, not a ZIP.
+## Current scope
 
-## What this repository implements
+The demo runs from the terminal or the local GUI and works with a local member-lookup app in Chromium. Live discovery uses OpenAI; offline discovery follows a script so you can try the flow without an API key. You can replay a saved capability with another member ID or take over the browser when automation needs help.
+
+The demo comes with a predefined task and a known set of controls. Support for other applications and a graphical task-entry window would be future work. It cannot currently attach to an arbitrary browser or desktop window. The commands below generate the JSON artifacts for you; you do not need to edit them.
+
+## What it does
 
 - A Zod-validated, portable capability artifact format
 - Model-assisted workflow discovery with route and origin constraints
@@ -32,25 +62,80 @@ See [INTERVIEW.md](./INTERVIEW.md) for concise decision rationales, alternatives
 - Human-in-the-loop pause, handoff, and control restoration
 - Browser support through Playwright plus an in-memory fake adapter for tests
 
-## Architecture
+## Architecture Overview
 
-```text
-Goal
-  -> Discovery Engine + Discovery Model
-  -> Policy-constrained Surface Adapter
-  -> Successful Trace
-  -> Capability Compiler
-  -> Validated Capability Artifact
-  -> Deterministic Replay Engine
-       -> Policy Evaluation
-       -> Target Resolution
-       -> Checkpoint Verification
-       -> Action Execution
-       -> Evidence Capture
-       -> Explicit Result
+### High-level architecture
+
+```mermaid
+---
+config:
+  layout: elk
+---
+flowchart TD
+    U["User or calling application"] --> CLI["Demo CLI / host orchestration"]
+    CLI --> D["Discovery engine"]
+    M["OpenAI discovery model"] -->|Proposed decision| D
+    D -->|Sanitized observations| M
+
+    H["Host specification<br/>Targets, grants, inputs, checkpoints"] --> D
+    D --> P["External policy checks"]
+    P --> S["SurfaceAdapter"]
+    S --> B["Playwright browser / local UI"]
+    B -->|Observed state| S
+    S --> D
+
+    D -->|Host-verified successful trace| C["Capability compiler"]
+    C --> A[("Validated JSON artifact")]
+    A --> R["Deterministic replay engine"]
+    CLI --> R
+    R --> P
+    S -->|Observed state| R
+
+    R -->|Blocked| HITL["Human handoff coordinator"]
+    HITL <-->|Same browser session| O["Operator"]
+    HITL -->|Verified handback| R
+
+    D --> E["Evidence sanitization"]
+    R --> E
+    E --> F[("Local evidence files")]
 ```
 
-The capability artifact is the boundary between discovery and production replay. It describes application compatibility, typed inputs and outputs, allowed authority, targets, steps, recovery behavior, expected outcomes, and provenance. It contains no Playwright or model-provider types.
+Discovery can also pause for human takeover when operator mode is enabled. Both paths keep the same browser session and verify its state before resuming.
+
+### User workflow
+
+```mermaid
+---
+config:
+  layout: elk
+---
+flowchart TD
+    Start["Install dependencies and Chromium"] --> Mode{"Choose CLI mode"}
+    Mode --> Live["Live discovery: configure key and model"]
+    Mode --> Offline["Offline discovery: scripted fixture"]
+    Mode --> Saved["Replay: saved artifact and new inputs"]
+    Live --> Discover["Observe, decide and act in demo app"]
+    Offline --> Discover
+    Discover --> Complete{"Goal verified?"}
+    Complete -->|Yes| Artifact["Compile and save capability"]
+    Artifact --> Replay["Replay without model decisions"]
+    Saved --> Replay
+    Complete -->|Blocked with operator enabled| Pause["Pause and expose same browser session"]
+    Replay --> Outcome{"Execution outcome"}
+    Outcome -->|Intervention with operator enabled| Pause
+    Pause --> Human["Human acts, then types resume"]
+    Human --> Verify{"Handback verified and budget remains?"}
+    Verify -->|Yes| Continue["Continue paused discovery or replay"]
+    Continue --> Outcome
+    Verify -->|No| Stop["Stop with explicit result"]
+    Complete -->|Failed or budget exhausted| Stop
+    Outcome -->|Success, business outcome or failure| Result["Inspect result and redacted evidence"]
+    Stop --> Result
+```
+
+After a human returns control, discovery still has to verify the goal before saving a capability. Resuming does not add permissions or reset the time and step limits.
+
+The saved artifact connects discovery to replay. It defines the inputs, outputs, steps, controls, permissions, checks, and recovery rules. It also records where the capability came from. Its format is independent of Playwright and the model provider.
 
 ## Safety model
 
@@ -69,16 +154,16 @@ High-risk actions receive evidence capture before and after execution. Risky ret
 
 ## Requirements
 
-- Node.js 24.3 or newer within the Node 24 release line (`^24.3.0` in `package.json`)
+- Node.js 26.x (package engines, CI, and `.nvmrc` select Node 26)
 - npm
 - Playwright Chromium for browser tests and demos
 - An OpenAI API key and Responses API model ID for live discovery only
 
-The recorded validation used Node.js 24.21.0. The project is a private ESM package using TypeScript, Zod, Playwright, and Vitest.
+Current verification uses Node.js 26.10.0. Older validation records used Node.js 24.21.0. The project is a private ESM package using TypeScript, Zod, Playwright, and Vitest.
 
 ## Install
 
-From the repository root, install the locked dependencies and browser runtime:
+From the project directory, install the dependencies and Chromium:
 
 ```bash
 npm ci
@@ -94,6 +179,7 @@ npm run typecheck
 npm test
 npm run coverage
 npm run build
+npm run verify:evidence
 ```
 
 Additional commands:
@@ -102,23 +188,41 @@ Additional commands:
 | --- | --- |
 | `npm run test:watch` | Run tests in watch mode |
 | `npm run clean` | Remove compiled output |
+| `npm run setup` | Install dependencies, install Chromium, verify, build, and verify evidence while printing each command |
 | `npm run demo -- ...` | Build, then execute a demo command |
+| `npm run gui` | Build, then start the local browser control panel |
 
 Compiled JavaScript is written to `dist/`. Coverage enforces 100% statements, branches, functions, and lines for the configured source scope. Tests and offline demos do not make authenticated model calls.
 
-The last recorded full validation on September 21, 2026 passed type checking, build, and all 202 tests through `npm run coverage`, with all four coverage metrics at 100%. The same checks also passed after a clean-source dependency installation under Node 24.21.0. The unused standalone `chromium` dependency was removed; a subsequent clean install and `npm audit` report zero vulnerabilities. Browser execution continues through Playwright. See [P0 security validation](./P0_SECURITY_VALIDATION.md) for the execution record and limitations.
+Current validation passes type checking, build, and 241 tests with 100% configured coverage. `npm run verify:evidence` verifies 81 hashed files, nine parsed artifacts, expected outcomes, and portable snapshot references without opening a browser or calling a model. See [P0 security validation](./P0_SECURITY_VALIDATION.md) for dates, commands, and limits.
+
+## Run the GUI
+
+```bash
+npm run gui
+```
+
+The GUI builds the project, starts a local control panel on `http://127.0.0.1:4310` by default, and prints the exact URL. Set `GUI_PORT` before launching if that port is unavailable.
+
+The control panel can run offline scripted discovery, live OpenAI discovery after you configure `OPENAI_API_KEY` and `MODEL_NAME`, saved replay, and same-session handoff. It scans supported saved capabilities from `evidence/`, keeps sensitive API keys out of persisted GUI state, and uses the same local-origin, policy, replay, and handoff checks as the CLI.
+
+```bash
+GUI_PORT=4320 npm run gui
+```
 
 ## Run the demo
 
-Each command starts and stops its own local application and browser. Run from the repository root with port 4173 available; a separate application server is unnecessary.
+`npm run demo` or `npm run demo -- --help` prints usage. Each execution command starts and stops its own local application and browser. Run from the repository root with port 4173 available; a separate application server is unnecessary.
+
+Offline, discovery, and replay are headless by default. Add `--headed` to show Chromium and `--slow-mo 300` to slow Playwright operations. The browser closes when the run finishes. Handoff and `--operator` already open a visible browser; leave it open until handback completes.
 
 ### Offline discovery and replay
 
 ```bash
-npm run demo -- offline --port 4173 --member DEMO-001 --evidence evidence/runs
+npm run demo -- offline --headed --slow-mo 300 --port 4173 --member DEMO-001 --evidence evidence/runs
 ```
 
-This uses scripted discovery, compiles an artifact, then replays it in a fresh browser context. It requires no API key and does not establish genuine LLM discovery.
+This follows a scripted discovery flow, saves a capability, and replays it in a fresh browser context. It is a way to try the full flow without an API key. Use live discovery below to have the model choose the actions.
 
 ### Live OpenAI discovery
 
@@ -148,22 +252,26 @@ Both `discover` and `--live` are required to make billable model calls. Discover
 | `--port` | `4173`; saved artifacts remain bound to their original origin and port |
 | `--evidence` | `evidence/runs`; each execution gets a separate run directory |
 | `--artifact` | Required saved artifact path for `replay` and `handoff` |
-| `--scenario` | `normal`; the demo also supports `slow`, `expired`, `denied`, and `handoff` |
+| `--scenario` | `normal`; also `slow`, `expired`, `denied`, `handoff`, and `discovery-handoff` |
+| `--headed` | Show Chromium during offline/discovery/replay |
+| `--slow-mo` | Delay Playwright operations by 0-5000 ms; default 0 |
+| `--operator` | Enable visible human takeover during discovery or replay |
+| `--help` | Show usage without starting a server/browser |
 | `--live` | Required only for `discover`; rejected for other commands |
 
 ## Minimal replay example
 
-Replace `RUN_ID` with the directory printed by a successful discovery or offline run:
+Use the included genuine artifact, or replace its path with `artifact.json` from your own successful discovery:
 
 ```bash
-npm run demo -- replay \
-  --artifact evidence/live-validation/RUN_ID/artifact.json \
+npm run demo -- replay --headed --slow-mo 300 \
+  --artifact evidence/submission/genuine-discovery/artifact.json \
   --port 4173 \
   --member DEMO-002 \
   --evidence evidence/runs
 ```
 
-For offline artifacts, use `evidence/runs/RUN_ID/artifact.json`. Replay loads the saved artifact through `parseCapabilityArtifact` and makes zero model calls. It requires no API key. Invalid cross-references, undeclared inputs, and unsafe retry policies fail validation before execution.
+For a new offline run, use the exact `evidence/runs/RUN_ID/artifact.json` path printed by that run. A deleted, mistyped, or example-only run ID is not a valid artifact path. Replay loads the saved artifact through `parseCapabilityArtifact` and makes zero model calls. It requires no API key. Invalid cross-references, undeclared inputs, and unsafe retry policies fail validation before execution.
 
 To exercise distinct runtime outcomes, repeat the replay command with `--member DEMO-999` for `BUSINESS_OUTCOME / MEMBER_NOT_FOUND`, or add `--scenario expired` with a valid member for `INTERVENTION_REQUIRED / SESSION_EXPIRED`.
 
@@ -171,7 +279,7 @@ To exercise distinct runtime outcomes, repeat the replay command with `--member 
 
 ```bash
 npm run demo -- handoff \
-  --artifact evidence/live-validation/RUN_ID/artifact.json \
+  --artifact evidence/submission/genuine-discovery/artifact.json \
   --port 4173 \
   --member DEMO-001 \
   --evidence evidence/human-handoff
@@ -179,27 +287,43 @@ npm run demo -- handoff \
 
 This opens a headed browser and pauses automation. In that same window, click **Release session**, then type `resume` in the terminal to return control. Any other answer cancels. The command selects the handoff scenario automatically. Automated handoff coverage and a genuine operator takeover/handback run are verified. The successful run resumed the blocked step without repeating prior actions; see the validation record.
 
+### Discovery-time human handoff
+
+```bash
+npm run demo -- offline --operator --scenario discovery-handoff --port 4173
+```
+
+This is an explicitly scripted fixture with real browser/operator control and no API charges. To use a model, replace `offline` with `discover --live` and configure the key/model. The original discovery step and two-minute time budgets remain active during takeover. Click **Release session**, confirm **Ready**, leave the window open, and type `resume`.
+
+After verified handback, discovery reobserves the same page and continues without replaying its prefix. An exhausted budget, approval requirement, or failed/uncertain action cannot be bypassed by handback. Cancellation and failed readiness checks are recorded and stop the run. Human actions are audit records, not silently compiled automation steps.
+
 ## Evidence and validation
 
 The CLI prints the disposition, code, and evidence directory. Inspect the persisted result rather than relying only on the process exit status: expected business outcomes and intervention results can exit with status 0.
 
 Run bundles contain `manifest.json`, `replay.json`, the saved `artifact.json` when available, and structural snapshots. Discovery additionally records `discovery.json` and `discovery-manifest.json`, including sanitized provider provenance. Failed discovery may have no artifact or replay result.
 
-| Completed validation | Evidence |
+| Completed validation | Included evidence |
 | --- | --- |
-| Genuine OpenAI discovery and automatic replay, four completed provider calls and three UI actions | `evidence/live-validation/02def122-935d-4638-b66b-584849d5bffb/` |
-| Separate saved-artifact replay with a second input and zero model calls | `evidence/live-validation/282b5e47-c15a-4958-ae4d-912e129c3b56/` |
-| Member-not-found and session-expiry outcomes using the same genuine artifact | `evidence/runtime-taxonomy/validation.json` |
-| Genuine same-session human takeover, explicit handback, and successful continuation | `evidence/human-handoff/validation.json` |
+| Genuine OpenAI discovery and automatic replay | [genuine-discovery](./evidence/submission/genuine-discovery/) |
+| Same saved artifact, another input | [second-input-replay](./evidence/submission/second-input-replay/) |
+| Not found and session expiry | [not-found](./evidence/submission/not-found/), [expired-session](./evidence/submission/expired-session/) |
+| Scripted discovery with genuine human takeover | [discovery-handoff](./evidence/submission/discovery-handoff/) |
+| Automated replay takeover and rejected handback | [replay-handoff](./evidence/submission/replay-handoff/), [rejected-handback](./evidence/submission/rejected-handback/) |
+| Fixed sensitive-output failure | [privacy-regression](./evidence/submission/privacy-regression/) |
 
-These are local validation records; see [P0_SECURITY_VALIDATION.md](./P0_SECURITY_VALIDATION.md) for provenance, assertions, and exact scan scope. Mocked-provider tests are recorded separately from genuine discovery. Session expiry is an injected local demo condition.
+Sensitive invocation values stay host-bound. Checkpoint diagnostics register sensitive target/signal values and sanitize text before returning trace strings, even if extraction later fails. Bundle sanitization runs before persistence; structural snapshots omit page text, values, attributes, and URLs. Sensitive-target classification currently supports reviewed standard CSS selectors and fails closed otherwise. Scans cover specified values and patterns, not every possible secret.
 
-Sensitive invocation values stay host-bound; the model receives input metadata. Bundle sanitization runs before persistence, and structural snapshots omit page text, values, attributes, and URLs. However, failed replay output extraction can leave sensitive values in flattened checkpoint strings; the latest audit identifies this unresolved privacy defect. Sensitive-target classification currently requires supported, unambiguous standard CSS selectors and fails closed otherwise. Scans for specified values and credential patterns do not prove universal absence of sensitive data. At the time of this reassessment, the working-tree `.gitignore` does not exclude `evidence/`. Review and explicitly select sanitized submission records; do not bulk-add generated runs or archives.
+Only `evidence/submission/` is selected for repository tracking. Other generated runs and archives remain ignored. The included provenance records disclose path normalization; checksums and expected outcomes are verified by `npm run verify:evidence`.
 
 ## Troubleshooting
 
 | Symptom | Check / next step |
 | --- | --- |
+| No browser appears for offline/discover/replay | Add `--headed --slow-mo 300`; headless is the default. |
+| `ARTIFACT_READ_FAILED` | The file is missing or unreadable. Use `evidence/submission/genuine-discovery/artifact.json`, or an existing successful run. |
+| `ARTIFACT_INVALID` | Supply the saved capability file, not a manifest, replay log, or incomplete discovery. |
+| Missing `SHA256SUMS.json` | The evidence checkout is incomplete. Restore the complete `evidence/submission/` directory; do not generate hashes over an incomplete selection. |
 | Chromium executable missing or browser launch fails | Run `npx playwright install chromium`; on Linux install required system dependencies with `--with-deps`. |
 | Local server cannot start | Free the chosen port. For saved replay, preserve the artifact's original port. |
 | Missing model/key or generic `Demo stopped` | Check command syntax, `OPENAI_API_KEY`, `MODEL_NAME`, and the printed evidence directory. The wrapper deliberately suppresses raw errors. |
@@ -241,18 +365,15 @@ src/
 test/          Unit and end-to-end vertical-slice tests
 ELOG.md        Dated implementation progress and architectural decisions
 P0_SECURITY_VALIDATION.md  Security checks and genuine runtime evidence
-PROJECT_ASSESSMEMNT.md     Current assignment audit (requested filename)
-PROJECT_ASSESSMENT.md      Historical assessment
-INTERVIEW.md   Decision defenses, tradeoffs, and interview preparation
 REPORT.md      Seven-section design report and implementation limits
 notes.md       Engineering notebook and design rationale
 ```
 
-## Current scope
+## What I would build next
 
-This is a focused vertical slice, not a production automation service. It demonstrates the core trust boundary and execution semantics. Production deployment would still require durable orchestration, persistent artifact storage, secret management, multi-tenant isolation, richer observability, operator interfaces, and hardened browser/session infrastructure.
+Before using this in production, I would add persistent job and artifact storage, managed secrets, tenant isolation, an operator interface, and stronger browser/session management. The current project focuses on discovery, replay, policy checks, and human handoff for one application.
 
-## Design invariants
+## Design rules
 
 1. Replay does not depend on an LLM or model SDK.
 2. Target resolution is ordered and declared by the artifact.

@@ -1,0 +1,318 @@
+{
+  "disposition": "SUCCESS",
+  "runId": "cd70493f-ed42-4aa5-85e6-245d19b81f30",
+  "trace": [
+    {
+      "kind": "OBSERVATION",
+      "step": 1,
+      "observation": {
+        "surfaceKind": "browser",
+        "timestamp": "2026-09-23T00:30:46.168Z",
+        "location": "http://127.0.0.1:4173/",
+        "title": "Synthetic Member Desk",
+        "visibleText": [
+          "Synthetic Member Desk",
+          "Local demonstration. All member data is fictional.",
+          "Ready",
+          "Member ID",
+          "Find member"
+        ],
+        "targetValues": {
+          "balance": "[REDACTED]"
+        },
+        "signals": {
+          "session": "active",
+          "owner": "automation",
+          "sessionId": "[REDACTED]",
+          "controls": "See declared targets and visibleText"
+        }
+      }
+    },
+    {
+      "kind": "DECISION",
+      "step": 1,
+      "decision": {
+        "kind": "act",
+        "rationale": "Input the member ID into the member ID field to begin the member lookup process as part of achieving the goal.",
+        "actionType": "type",
+        "targetId": "member"
+      }
+    },
+    {
+      "kind": "POLICY",
+      "step": 1,
+      "decision": {
+        "disposition": "ALLOW",
+        "code": "POLICY_ALLOWED",
+        "reason": "Action and destination are within configured authority."
+      }
+    },
+    {
+      "kind": "ACTION",
+      "step": 1,
+      "capabilityStep": {
+        "id": "discovery-1",
+        "description": "Discovered type action",
+        "action": {
+          "type": "type",
+          "effect": "reversible_write",
+          "targetId": "member",
+          "value": {
+            "kind": "input",
+            "input": "memberId"
+          }
+        },
+        "preconditions": [],
+        "postconditions": [],
+        "recovery": {
+          "retry": {
+            "allowed": false,
+            "maxAttempts": 0,
+            "backoffMs": 0
+          },
+          "onFailure": "intervene",
+          "reconciliationRequiredAfterAmbiguousCommit": true
+        },
+        "humanApprovalRequired": false
+      },
+      "result": {
+        "ok": true
+      }
+    },
+    {
+      "kind": "OBSERVATION",
+      "step": 2,
+      "observation": {
+        "surfaceKind": "browser",
+        "timestamp": "2026-09-23T00:30:49.727Z",
+        "location": "http://127.0.0.1:4173/",
+        "title": "Synthetic Member Desk",
+        "visibleText": [
+          "Synthetic Member Desk",
+          "Local demonstration. All member data is fictional.",
+          "Ready",
+          "Member ID",
+          "Find member"
+        ],
+        "targetValues": {
+          "balance": "[REDACTED]"
+        },
+        "signals": {
+          "session": "active",
+          "owner": "automation",
+          "sessionId": "[REDACTED]",
+          "controls": "See declared targets and visibleText"
+        }
+      }
+    },
+    {
+      "kind": "DECISION",
+      "step": 2,
+      "decision": {
+        "kind": "act",
+        "rationale": "Click the 'Find member' button to submit the member ID and retrieve member details as the next step towards displaying the detailed savings balance.",
+        "actionType": "click",
+        "targetId": "find"
+      }
+    },
+    {
+      "kind": "POLICY",
+      "step": 2,
+      "decision": {
+        "disposition": "ALLOW",
+        "code": "POLICY_ALLOWED",
+        "reason": "Action and destination are within configured authority."
+      }
+    },
+    {
+      "kind": "ACTION",
+      "step": 2,
+      "capabilityStep": {
+        "id": "discovery-2",
+        "description": "Discovered click action",
+        "action": {
+          "type": "click",
+          "effect": "read",
+          "targetId": "find"
+        },
+        "preconditions": [
+          {
+            "id": "operator-ready",
+            "description": "Operator released this session",
+            "all": [
+              {
+                "kind": "text_visible",
+                "text": "Ready"
+              }
+            ]
+          }
+        ],
+        "postconditions": [],
+        "recovery": {
+          "retry": {
+            "allowed": false,
+            "maxAttempts": 0,
+            "backoffMs": 0
+          },
+          "onFailure": "intervene",
+          "reconciliationRequiredAfterAmbiguousCommit": true
+        },
+        "humanApprovalRequired": false
+      },
+      "result": {
+        "ok": true
+      }
+    },
+    {
+      "kind": "OBSERVATION",
+      "step": 3,
+      "observation": {
+        "surfaceKind": "browser",
+        "timestamp": "2026-09-23T00:30:51.219Z",
+        "location": "http://127.0.0.1:4173/",
+        "title": "Synthetic Member Desk",
+        "visibleText": [
+          "Synthetic Member Desk",
+          "Local demonstration. All member data is fictional.",
+          "Ready",
+          "Member ID",
+          "Find member",
+          "Open member"
+        ],
+        "targetValues": {
+          "balance": "[REDACTED]"
+        },
+        "signals": {
+          "session": "active",
+          "owner": "automation",
+          "sessionId": "[REDACTED]",
+          "controls": "See declared targets and visibleText"
+        }
+      }
+    },
+    {
+      "kind": "DECISION",
+      "step": 3,
+      "decision": {
+        "kind": "act",
+        "rationale": "Click the 'Open member' button to navigate to the member detail screen where the current savings balance can be verified, as required by the goal.",
+        "actionType": "click",
+        "targetId": "open"
+      }
+    },
+    {
+      "kind": "POLICY",
+      "step": 3,
+      "decision": {
+        "disposition": "ALLOW",
+        "code": "POLICY_ALLOWED",
+        "reason": "Action and destination are within configured authority."
+      }
+    },
+    {
+      "kind": "ACTION",
+      "step": 3,
+      "capabilityStep": {
+        "id": "discovery-3",
+        "description": "Discovered click action",
+        "action": {
+          "type": "click",
+          "effect": "read",
+          "targetId": "open"
+        },
+        "preconditions": [],
+        "postconditions": [],
+        "recovery": {
+          "retry": {
+            "allowed": false,
+            "maxAttempts": 0,
+            "backoffMs": 0
+          },
+          "onFailure": "intervene",
+          "reconciliationRequiredAfterAmbiguousCommit": true
+        },
+        "humanApprovalRequired": false
+      },
+      "result": {
+        "ok": true
+      }
+    },
+    {
+      "kind": "OBSERVATION",
+      "step": 4,
+      "observation": {
+        "surfaceKind": "browser",
+        "timestamp": "2026-09-23T00:30:52.339Z",
+        "location": "http://127.0.0.1:4173/",
+        "title": "Synthetic Member Desk",
+        "visibleText": [
+          "Synthetic Member Desk",
+          "Local demonstration. All member data is fictional.",
+          "Ready",
+          "Member ID",
+          "Find member",
+          "Open member",
+          "Member detail",
+          "Member [REDACTED]",
+          "Savings balance [REDACTED]"
+        ],
+        "targetValues": {
+          "balance": "[REDACTED]"
+        },
+        "signals": {
+          "session": "active",
+          "owner": "automation",
+          "sessionId": "[REDACTED]",
+          "controls": "See declared targets and visibleText"
+        }
+      }
+    },
+    {
+      "kind": "DECISION",
+      "step": 4,
+      "decision": {
+        "kind": "complete",
+        "rationale": "The member detail screen is displayed with the correct member ID selected and the savings balance visible, meeting all success criteria for completing the goal."
+      }
+    },
+    {
+      "kind": "POLICY",
+      "step": 4,
+      "decision": {
+        "disposition": "ALLOW",
+        "code": "POLICY_ALLOWED",
+        "reason": "Action and destination are within configured authority."
+      }
+    },
+    {
+      "kind": "CHECKPOINT",
+      "step": 4,
+      "checkpointId": "member-detail",
+      "passed": true,
+      "expected": [
+        "{\"kind\":\"text_visible\",\"text\":\"Member detail\"}",
+        "{\"kind\":\"target_present\",\"targetId\":\"balance\"}",
+        "{\"kind\":\"target_value_equals_input\",\"targetId\":\"selected\",\"input\":\"memberId\"}"
+      ],
+      "observed": [
+        "Synthetic Member Desk | Local demonstration. All member data is fictional. | Ready | Member ID | Find member | Open member | Member detail | Member [REDACTED] | Savings balance [REDACTED]",
+        "target:balance:selector",
+        "target:selected:selector",
+        "{\"ok\":true,\"observedValue\":\"[REDACTED]\"}"
+      ],
+      "timestamp": "2026-09-23T00:30:54.286Z"
+    },
+    {
+      "kind": "EVIDENCE",
+      "evidence": {
+        "id": "browser-evidence-[REDACTED]-0",
+        "kind": "snapshot",
+        "path": "discovery/browser-evidence-dfc54deb-0d19-46df-ac18-7026cbcc651c-0.json",
+        "metadata": {
+          "format": "structural-dom-v1"
+        }
+      }
+    }
+  ],
+  "outputs": {}
+}

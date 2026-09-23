@@ -1,0 +1,6 @@
+{
+  "mode": "automated-operator-browser-test",
+  "expectedCode": "EXECUTION_FAILED",
+  "operator": "Programmatic test callback, not a human operator.",
+  "modelCallsDuringReplay": 0
+}

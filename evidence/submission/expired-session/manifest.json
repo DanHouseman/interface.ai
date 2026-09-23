@@ -1,0 +1,10 @@
+{
+  "runId": "a01fe37b-c2a3-485e-aba3-11a5885f3caf",
+  "startedAt": "2026-09-23T00:40:48.238Z",
+  "completedAt": "2026-09-23T00:40:49.474Z",
+  "discoveryMode": "saved-artifact-replay",
+  "modelCallsDuringReplay": 0,
+  "target": "http://127.0.0.1:4173/",
+  "scenario": "expired",
+  "provider": null
+}

@@ -1,5 +1,85 @@
 # Implementation Progress
 
+## 09/22/2026 GUI Control Panel, Setup Script, and Coverage Closure
+
+### Completed
+
+- Added and documented the local GUI control panel flow, including `npm run gui`, default port behavior, saved capability scanning, replay, live discovery setup, and same-session handoff coverage.
+- Added a top-level README TLDR with the setup path, GUI launch command, and the ordered commands used under the hood.
+- Added `scripts/setup.mjs` and `npm run setup` as a single installation/verification entrypoint. The script outlines the plan, prints each command in blue parentheses, renders active steps in cyan in place, marks passes green, marks failures red, captures command output during normal execution, and prints captured output only when a step fails.
+- Added `--print-only` to preview the setup plan without running the install/build/test commands, and `--launch-gui` to start the GUI after successful setup.
+- Expanded `test/gui.test.ts` to cover GUI server request validation, browser setup state, saved artifact filtering, active-run guards, live model wrapping, run history trimming, cancellation, launcher startup/error paths, abort cleanup, and same-session handoff behavior.
+- Tightened GUI/server and abort-cleanup branches so coverage tracks executable behavior without unreachable fallback counters.
+- Fixed TypeScript mock shapes in GUI tests by returning a full `ReplayResult`, using a typed capability placeholder, passing a complete `InterventionRequest`, and supplying required `DemoOptions.live` values.
+
+### Validation
+
+- `npm run typecheck` passed after the GUI test type fixes.
+- `npx vitest run test/gui.test.ts` passed: 9 tests.
+- Full coverage passed after GUI coverage work: 241 tests with 100% statements, branches, functions, and lines.
+- `node --check scripts/setup.mjs` passed.
+- `npm run setup -- --print-only` passed and displayed the ordered setup plan without executing the heavyweight setup steps.
+
+### Remaining Delivery Work
+
+- The in-place setup display is intended for interactive terminals. CI and non-TTY logs still receive regular line output.
+- Public publication, remote CI, and submission email remain separate delivery steps.
+
+## 09/22/2026 Documentation and Submission Update
+
+### Completed
+
+- Standardized the runtime on Node 26.x in package metadata, lockfile, CI, and .nvmrc.
+- Removed public-document references to local preparation notes and excluded those notes from Git tracking while retaining local copies.
+- Retained curated assignment evidence under evidence/submission/, including genuine discovery, saved artifacts, deterministic replay, exceptional outcomes, handoff, provenance, and checksums. Generated runs remain ignored.
+- Updated README with current CLI capabilities and explicit limits; added high-level architecture and user workflow Mermaid diagrams configured for ELK layout. A graphical launcher and arbitrary-window control remain unimplemented.
+
+### Validation
+
+- Evidence verification and TypeScript checks rerun for this documentation/configuration update; prior application validation remains 232 tests with 100% configured coverage.
+- Public publication, remote CI, and submission email remain separate delivery steps.
+
+## 09/22/2026 Completed
+
+### Milestone 20: Audit Repairs, Curated Evidence, and Usable CLI
+
+### Completed
+
+-   Sanitized classified checkpoint diagnostics before trace flattening, removing the failed-output
+    privacy dependency on successful extraction. Preserved actual checkpoint boolean results.
+-   Connected discovery intervention to same-session human takeover with explicit handback,
+    verification and original step/time limits. Approval, uncertain actions and exhausted budgets
+    cannot be bypassed. Added `--operator` and the discovery-handoff scenario.
+-   Verified genuine human release/handback with scripted discovery, compilation and replay.
+    This is labeled separately from genuine OpenAI discovery.
+-   Completed `evidence/submission/` with nine curated run directories, provenance, checksums,
+    relative snapshot references and a verifier. Generated runs and archives remain ignored.
+-   Separated snapshot identifiers from redacted session IDs so new evidence references resolve.
+-   Bare `npm run demo` now shows help. Added `--headed` and `--slow-mo`; operator mode is visible.
+    Added safe preflight diagnostics for artifact, origin, server and browser setup failures.
+-   Preserved the user's Node 26 direction, broadened the exact runtime pin to `^26.6.2` so it
+    includes tested Node 26.10.0, and aligned CI runtime configuration.
+-   Updated README, report, assessment and interview defenses to reflect the verified repairs.
+
+### Tests
+
+-   Typecheck and build pass; 232 tests pass with 100% statements (1042/1042), branches (765/765),
+    functions (182/182) and lines (819/819) under Node 26.10.0.
+-   Wrong-type replay still reports `INVALID_OUTPUT_TYPE`, now without sensitive balance text.
+    Regression cases include missing/wrong outputs, failed checkpoints, partial extraction and
+    boolean-sensitive values; persisted snapshot references also remain usable.
+-   `npm run verify:evidence` passes: 81 hashed files, nine parsed artifacts, zero tested sensitive
+    matches and all snapshot references resolvable, without browser or provider calls.
+-   Manual discovery takeover: `578cd282-8cf4-4ba1-81e6-16fde6528edc`. Included genuine source:
+    `cd70493f-ed42-4aa5-85e6-245d19b81f30`.
+-   An intermediate 231-test run failed the branch coverage threshold; CLI validation tests and
+    unreachable post-validation fallbacks were corrected before the final passing run.
+
+### Remaining Delivery Work
+
+-   Review and commit the changes, verify the public repository and remote CI, then submit the URL.
+-   No new model API call, public push or submission email was performed by the agent here.
+
 ## 09/21/2026 Completed
 
 ### Milestone 19: Assignment Reassessment and Interview Preparation
@@ -11,9 +91,9 @@
 
 ### Completed
 
--   Created `PROJECT_ASSESSMEMNT.md` using the requested filename, with requirement traceability,
+-   Recorded the assignment review locally, with requirement traceability,
     evidence classifications, objections, findings, reproduction details, and acceptance gates.
--   Created `INTERVIEW.md` with concise technical defenses, alternatives, limits, likely challenges,
+-   Prepared local interview notes with concise technical defenses, alternatives, limits, likely challenges,
     and explicitly conditional cost/reliability/memory reasoning. No personal credentials or
     professional experience were invented.
 -   Updated README and linked historical assessment/report to the current findings.
@@ -557,10 +637,9 @@ not part of this implementation slice.
 
 # Next Implementation
 
-1.  Fix the reproduced failed-replay sensitive-output leak and add failure-path canary tests.
-2.  Connect stopped discovery to same-session operator handoff with verified continuation.
-3.  Curate evidence for the public repository and verify the final submission revision.
-4.  Rehearse the decision defenses and limitations in `INTERVIEW.md`.
+1.  Review and commit the audit repairs, CLI improvements and curated evidence.
+2.  Verify the final public repository and CI result.
+3.  Submit the repository URL as instructed; do not substitute a ZIP.
 
 # Planned Milestones
 

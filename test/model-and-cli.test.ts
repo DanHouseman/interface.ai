@@ -100,11 +100,21 @@ describe("credit-safe CLI", () => {
   it.each([new Error("raw error"), new ExecutionError("OTHER", "raw error"), new ExecutionError("DEMO_DISCOVERY_FAILED", "Sanitized failure: evidence/path")])("prints only the sanitized discovery failure envelope", async error => {
     const terminal = io(); const execute = executor().mockRejectedValue(error);
     await expect(main(["offline"], {}, execute, terminal)).rejects.toBe(error);
-    if (error instanceof ExecutionError && error.code === "DEMO_DISCOVERY_FAILED") expect(terminal.log).toHaveBeenCalledWith(error.message);
+    if (error instanceof ExecutionError && error.code === "DEMO_DISCOVERY_FAILED") expect(terminal.log).toHaveBeenCalledWith(`DEMO_DISCOVERY_FAILED: ${error.message}`);
     else expect(terminal.log).not.toHaveBeenCalled();
   });
-  it.each([[], ["wrong"], ["discover"], ["offline", "--live"], ["replay"], ["handoff"], ["offline", "--port", "0"], ["offline", "--port", "70000"], ["offline", "--port", "NaN"]].map(args => [args]))("rejects unsafe or invalid command %j", async args => {
+  it.each([["--headed"], ["wrong"], ["discover"], ["offline", "--live"], ["replay"], ["handoff"], ["offline", "--port", "0"], ["offline", "--port", "70000"], ["offline", "--port", "NaN"], ["offline", "--slow-mo", "-1"], ["offline", "--slow-mo", "5001"], ["offline", "--slow-mo", "NaN"]].map(args => [args]))("rejects unsafe or invalid command %j", async args => {
     const execute = executor(); await expect(main(args, {}, execute, io())).rejects.toThrow(); expect(execute).not.toHaveBeenCalled();
+  });
+  it("prints help without executing a demo when no command or --help is supplied", async () => {
+    const execute = executor(), terminal = io();
+    await main([], {}, execute, terminal); await main(["--help"], {}, execute, terminal);
+    expect(execute).not.toHaveBeenCalled(); expect(terminal.log).toHaveBeenCalledWith(expect.stringContaining("--headed"));
+  });
+  it("supports visible and slowed browser runs", async () => {
+    const execute = executor();
+    await main(["offline", "--headed", "--slow-mo", "300"], {}, execute, io());
+    expect(execute.mock.calls[0]![0]).toMatchObject({ headless: false, slowMoMs: 300 });
   });
   it("runs offline without keys and replay without a model", async () => {
     const execute = executor(); const terminal = io(); await main(["offline"], {}, execute, terminal);

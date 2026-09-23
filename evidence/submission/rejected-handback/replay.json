@@ -1,0 +1,204 @@
+{
+  "disposition": "FAILURE",
+  "code": "EXECUTION_FAILED",
+  "message": "RESUME_CHECKPOINT_FAILED",
+  "trace": [
+    {
+      "kind": "STEP_STARTED",
+      "stepId": "discovery-1",
+      "timestamp": "2026-09-23T00:40:50.114Z"
+    },
+    {
+      "kind": "SESSION_STATE",
+      "stepId": "discovery-1",
+      "state": "active",
+      "timestamp": "2026-09-23T00:40:50.124Z"
+    },
+    {
+      "kind": "POLICY_DECISION",
+      "stepId": "discovery-1",
+      "disposition": "ALLOW",
+      "code": "POLICY_ALLOWED",
+      "reason": "Action and destination are within configured authority.",
+      "timestamp": "2026-09-23T00:40:50.131Z"
+    },
+    {
+      "kind": "CHECKPOINT",
+      "stepId": "discovery-1",
+      "checkpointId": "missing",
+      "phase": "business_outcome",
+      "passed": false,
+      "expected": [
+        "{\"kind\":\"text_visible\",\"text\":\"Member not found\"}"
+      ],
+      "observed": [
+        "Synthetic Member Desk | Local demonstration. All member data is fictional. | Operator approval required Release session | Waiting for operator | Member ID | Find member"
+      ],
+      "timestamp": "2026-09-23T00:40:50.132Z"
+    },
+    {
+      "kind": "CHECKPOINT",
+      "stepId": "discovery-1",
+      "checkpointId": "invalid",
+      "phase": "business_outcome",
+      "passed": false,
+      "expected": [
+        "{\"kind\":\"text_visible\",\"text\":\"Invalid member ID\"}"
+      ],
+      "observed": [
+        "Synthetic Member Desk | Local demonstration. All member data is fictional. | Operator approval required Release session | Waiting for operator | Member ID | Find member"
+      ],
+      "timestamp": "2026-09-23T00:40:50.132Z"
+    },
+    {
+      "kind": "TARGET_RESOLVED",
+      "stepId": "discovery-1",
+      "targetId": "member",
+      "strategyKind": "selector",
+      "timestamp": "2026-09-23T00:40:50.134Z"
+    },
+    {
+      "kind": "POLICY_DECISION",
+      "stepId": "discovery-1",
+      "disposition": "ALLOW",
+      "code": "POLICY_ALLOWED",
+      "reason": "Action and destination are within configured authority.",
+      "timestamp": "2026-09-23T00:40:50.137Z"
+    },
+    {
+      "kind": "ACTION_RESULT",
+      "stepId": "discovery-1",
+      "attempt": 1,
+      "ok": true,
+      "timestamp": "2026-09-23T00:40:50.146Z"
+    },
+    {
+      "kind": "CHECKPOINT",
+      "stepId": "discovery-1",
+      "checkpointId": "missing",
+      "phase": "business_outcome",
+      "passed": false,
+      "expected": [
+        "{\"kind\":\"text_visible\",\"text\":\"Member not found\"}"
+      ],
+      "observed": [
+        "Synthetic Member Desk | Local demonstration. All member data is fictional. | Operator approval required Release session | Waiting for operator | Member ID | Find member"
+      ],
+      "timestamp": "2026-09-23T00:40:50.147Z"
+    },
+    {
+      "kind": "CHECKPOINT",
+      "stepId": "discovery-1",
+      "checkpointId": "invalid",
+      "phase": "business_outcome",
+      "passed": false,
+      "expected": [
+        "{\"kind\":\"text_visible\",\"text\":\"Invalid member ID\"}"
+      ],
+      "observed": [
+        "Synthetic Member Desk | Local demonstration. All member data is fictional. | Operator approval required Release session | Waiting for operator | Member ID | Find member"
+      ],
+      "timestamp": "2026-09-23T00:40:50.147Z"
+    },
+    {
+      "kind": "STEP_COMPLETED",
+      "stepId": "discovery-1",
+      "timestamp": "2026-09-23T00:40:50.147Z"
+    },
+    {
+      "kind": "STEP_STARTED",
+      "stepId": "discovery-2",
+      "timestamp": "2026-09-23T00:40:50.147Z"
+    },
+    {
+      "kind": "SESSION_STATE",
+      "stepId": "discovery-2",
+      "state": "active",
+      "timestamp": "2026-09-23T00:40:50.148Z"
+    },
+    {
+      "kind": "POLICY_DECISION",
+      "stepId": "discovery-2",
+      "disposition": "ALLOW",
+      "code": "POLICY_ALLOWED",
+      "reason": "Action and destination are within configured authority.",
+      "timestamp": "2026-09-23T00:40:50.151Z"
+    },
+    {
+      "kind": "CHECKPOINT",
+      "stepId": "discovery-2",
+      "checkpointId": "missing",
+      "phase": "business_outcome",
+      "passed": false,
+      "expected": [
+        "{\"kind\":\"text_visible\",\"text\":\"Member not found\"}"
+      ],
+      "observed": [
+        "Synthetic Member Desk | Local demonstration. All member data is fictional. | Operator approval required Release session | Waiting for operator | Member ID | Find member"
+      ],
+      "timestamp": "2026-09-23T00:40:50.152Z"
+    },
+    {
+      "kind": "CHECKPOINT",
+      "stepId": "discovery-2",
+      "checkpointId": "invalid",
+      "phase": "business_outcome",
+      "passed": false,
+      "expected": [
+        "{\"kind\":\"text_visible\",\"text\":\"Invalid member ID\"}"
+      ],
+      "observed": [
+        "Synthetic Member Desk | Local demonstration. All member data is fictional. | Operator approval required Release session | Waiting for operator | Member ID | Find member"
+      ],
+      "timestamp": "2026-09-23T00:40:50.153Z"
+    },
+    {
+      "kind": "CHECKPOINT",
+      "stepId": "discovery-2",
+      "checkpointId": "operator-ready",
+      "phase": "precondition",
+      "passed": false,
+      "expected": [
+        "{\"kind\":\"text_visible\",\"text\":\"Ready\"}"
+      ],
+      "observed": [
+        "Synthetic Member Desk | Local demonstration. All member data is fictional. | Operator approval required Release session | Waiting for operator | Member ID | Find member"
+      ],
+      "timestamp": "2026-09-23T00:40:50.153Z"
+    },
+    {
+      "kind": "EVIDENCE",
+      "stepId": "discovery-2",
+      "evidence": {
+        "id": "browser-evidence-451ed08a-b50a-4752-bd19-f7f198639cf1-0",
+        "kind": "snapshot",
+        "path": "replay/browser-evidence-451ed08a-b50a-4752-bd19-f7f198639cf1-0.json",
+        "metadata": {
+          "format": "structural-dom-v1"
+        }
+      },
+      "timestamp": "2026-09-23T00:40:50.163Z"
+    },
+    {
+      "kind": "EVIDENCE",
+      "stepId": "discovery-2",
+      "evidence": {
+        "id": "browser-evidence-451ed08a-b50a-4752-bd19-f7f198639cf1-1",
+        "kind": "snapshot",
+        "path": "replay/browser-evidence-451ed08a-b50a-4752-bd19-f7f198639cf1-1.json",
+        "metadata": {
+          "format": "structural-dom-v1"
+        }
+      },
+      "timestamp": "2026-09-23T00:40:50.165Z"
+    },
+    {
+      "kind": "EVIDENCE_FAILURE",
+      "stepId": "discovery-2",
+      "code": "EVIDENCE_CAPTURE_FAILED",
+      "message": "Cannot capture browser evidence after the page has closed.",
+      "timestamp": "2026-09-23T00:40:50.175Z"
+    }
+  ],
+  "stepId": "discovery-2"
+}

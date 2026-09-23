@@ -14,7 +14,7 @@ Updated: 2026-09-21. Original automated validation: 2026-09-20. Runtime: Node v2
 
 Objective: preserve goal -> discovery -> external policy/authority -> compiled capability -> deterministic replay, while separating live data, model context, in-memory traces and persisted evidence.
 
-Assumptions: host contracts classify sensitive data accurately; adapters are trusted to report declared target values. The local demo uses ordinary CSS selectors. No API key was created, printed, written, or used. Pre-existing changes to PROJECT_ASSESSMENT.md, deletion of package-lock.json/empty.txt, and unrelated untracked files were left intact.
+Assumptions: host contracts classify sensitive data accurately; adapters are trusted to report declared target values. The local demo uses ordinary CSS selectors. No API key was created, printed, written, or used. Pre-existing documentation changes, deletion of package-lock.json/empty.txt, and unrelated untracked files were left intact.
 
 | Decision | Supporting argument | Opposing argument / trade-off | Edge cases and second-order effects |
 | --- | --- | --- | --- |
@@ -214,4 +214,22 @@ Copied the updated manifest and lockfile into the isolated committed-source expo
 
 The current source still passes all 202 coverage tests, but a new real-browser experiment reproduced a sensitive-output persistence defect: change the genuine artifact's sensitive balance type from string to number, replay normally, and inspect the failed run. The result is `INVALID_OUTPUT_TYPE`, outputs are absent, and the checkpoint trace persists the synthetic balance. Scratch evidence is `/private/tmp/interface-audit-B9ANJR/f5a9d883-501d-49e7-b3c0-0523ef48032e/`; it was not copied into submission evidence. Historical zero-match scans above remain true for their specified files and scenarios and do not cover this case.
 
-See [PROJECT_ASSESSMEMNT.md](./PROJECT_ASSESSMEMNT.md) for full requirement mapping, root cause, and repair gates, including missing discovery-time operator routing. This audit changed documentation only. Current completion status is incomplete, not 100% aligned. The user's working-tree `.gitignore` edit was preserved; evidence is untracked and no public submission occurred.
+The audit covered requirement mapping, root cause, and repair gates, including missing discovery-time operator routing. This audit changed documentation only. Current completion status is incomplete, not 100% aligned. The user's working-tree `.gitignore` edit was preserved; evidence is untracked and no public submission occurred.
+
+## Audit repairs and evidence completion: 2026-09-22
+
+F1 is repaired: checkpoint sampling classifies sensitive target/signal values before sanitizing diagnostic strings; the boolean pass result is preserved independently. Real-browser regressions cover wrong/missing outputs, failed final checkpoint and later-output failure. The original wrong-type reproduction now returns `INVALID_OUTPUT_TYPE` without persisting the balance. See `evidence/submission/privacy-regression/`.
+
+F2 is repaired: discovery routes through the existing coordinator and live page with `--operator`. Verified handback reobserves within the original step/time budget. Failed/uncertain actions, approval requirements and exhausted budgets cannot be bypassed. Tests cover cancellation, failed readiness, deadline expiry and prefix preservation. Human phases remain audit data, not silently compiled actions.
+
+Genuine-human verification command: `npm run demo -- offline --operator --scenario discovery-handoff --slow-mo 200 --port 4173 --member DEMO-001 --evidence evidence/audit-fixes`. It succeeded as run `578cd282-8cf4-4ba1-81e6-16fde6528edc`: user clicked Release session and replied Resume; assistant forwarded the explicit handback. This is scripted discovery with a genuine operator, not another provider run.
+
+F3 is completed locally: the curated selection uses available successful genuine run `cd70493f-ed42-4aa5-85e6-245d19b81f30`, fresh saved replays, not-found, expiry, automated replay handoff/rejection, privacy regression and genuine-human scripted discovery handoff. Earlier local evidence IDs in this historical record may no longer exist. No past execution is relabeled as a new run.
+
+Packaging initially stopped on redacted session IDs in snapshot paths, leaving SHA256SUMS.json absent. Curated paths now resolve by unique directory/sequence matches, with original hashes and transformations in PROVENANCE.json. New adapter evidence IDs are independent of session IDs. Source files are unchanged; review copies use relative paths.
+
+`npm run verify:evidence` passes: 81 hashed files, nine parsed artifacts, expected outcomes, unchanged genuine replay artifacts, provider fields, handoff/prefix assertions, all references resolvable, and no specified sensitive-value/API-key/Bearer patterns. This is not a universal privacy proof. The curated repository files, not the old ZIP, are the intended submission evidence.
+
+CLI verification: `npm run demo` exits 0 and prints help; --headed shows the browser; --slow-mo slows actions. Missing/invalid artifact preflight occurs before launch and produces safe codes. Server, origin and browser failures also have safe diagnostics. The user's reported `7194ab5b-5400-4608-93c9-6ed706f2fd47` path does not exist locally; use `evidence/submission/genuine-discovery/artifact.json`.
+
+Under Node 26.10.0, typecheck/build and 232 coverage tests pass: statements 1042/1042, branches 765/765, functions 182/182, lines 819/819. The user's Node 26 dependency changes are retained and the exact runtime pin is widened to ^26.6.2. The intermediate 231-test run had 99.6% branch coverage and was not accepted. No new npm audit, authenticated model call, or remote CI result is claimed for this pass.

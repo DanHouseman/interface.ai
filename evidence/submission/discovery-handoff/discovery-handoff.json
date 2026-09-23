@@ -1,0 +1,45 @@
+[
+  {
+    "timestamp": "2026-09-23T00:39:21.737Z",
+    "phase": "paused",
+    "id": "4990affa-6a12-4f92-a6a1-f7b924462822",
+    "stepId": "discovery-2",
+    "reason": "PRECONDITION_FAILED",
+    "owner": "human",
+    "state": "paused",
+    "evidence": {
+      "id": "browser-evidence-[REDACTED]-0",
+      "kind": "snapshot",
+      "path": "discovery/browser-evidence-a0a218dc-d93b-4d46-a5be-6b775c43fb1b-0.json",
+      "metadata": {
+        "format": "structural-dom-v1"
+      }
+    }
+  },
+  {
+    "timestamp": "2026-09-23T00:39:48.297Z",
+    "phase": "handback",
+    "id": "4990affa-6a12-4f92-a6a1-f7b924462822",
+    "operatorId": "local-operator",
+    "actions": [
+      {
+        "operatorId": "local-operator",
+        "timestamp": "2026-09-23T00:39:29.779Z",
+        "description": "change INPUT"
+      },
+      {
+        "operatorId": "local-operator",
+        "timestamp": "2026-09-23T00:39:29.785Z",
+        "description": "click BUTTON"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-09-23T00:39:48.582Z",
+    "phase": "resumed",
+    "id": "4990affa-6a12-4f92-a6a1-f7b924462822",
+    "verified": true,
+    "owner": "automation",
+    "state": "active"
+  }
+]

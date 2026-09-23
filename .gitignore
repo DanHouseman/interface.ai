@@ -10,3 +10,7 @@ artifacts/runtime/
 # Keep generated runs local; track only reviewed submission evidence.
 /evidence/*
 !/evidence/submission/
+
+# Local assessment and interview preparation documents.
+/INTERVIEW.md
+/PROJECT_ASSESS*.md

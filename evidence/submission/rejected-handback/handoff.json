@@ -1,0 +1,33 @@
+[
+  {
+    "timestamp": "2026-09-23T00:40:50.170Z",
+    "phase": "paused",
+    "id": "ed9aa9da-2d56-4df2-8a07-e5a83b27672c",
+    "stepId": "discovery-2",
+    "reason": "PRECONDITION_FAILED",
+    "owner": "human",
+    "state": "paused",
+    "evidence": {
+      "id": "browser-evidence-451ed08a-b50a-4752-bd19-f7f198639cf1-2",
+      "kind": "snapshot",
+      "path": "replay/browser-evidence-451ed08a-b50a-4752-bd19-f7f198639cf1-2.json",
+      "metadata": {
+        "format": "structural-dom-v1"
+      }
+    }
+  },
+  {
+    "timestamp": "2026-09-23T00:40:50.174Z",
+    "phase": "handback",
+    "id": "ed9aa9da-2d56-4df2-8a07-e5a83b27672c",
+    "operatorId": "local-operator",
+    "actions": []
+  },
+  {
+    "timestamp": "2026-09-23T00:40:50.175Z",
+    "phase": "failed",
+    "stepId": "discovery-2",
+    "code": "HANDOFF_FAILED",
+    "actions": []
+  }
+]

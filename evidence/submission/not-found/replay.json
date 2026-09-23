@@ -1,0 +1,313 @@
+{
+  "disposition": "BUSINESS_OUTCOME",
+  "code": "MEMBER_NOT_FOUND",
+  "message": "Member does not exist.",
+  "trace": [
+    {
+      "kind": "STEP_STARTED",
+      "stepId": "discovery-1",
+      "timestamp": "2026-09-23T00:40:46.976Z"
+    },
+    {
+      "kind": "SESSION_STATE",
+      "stepId": "discovery-1",
+      "state": "active",
+      "timestamp": "2026-09-23T00:40:46.988Z"
+    },
+    {
+      "kind": "POLICY_DECISION",
+      "stepId": "discovery-1",
+      "disposition": "ALLOW",
+      "code": "POLICY_ALLOWED",
+      "reason": "Action and destination are within configured authority.",
+      "timestamp": "2026-09-23T00:40:46.995Z"
+    },
+    {
+      "kind": "CHECKPOINT",
+      "stepId": "discovery-1",
+      "checkpointId": "missing",
+      "phase": "business_outcome",
+      "passed": false,
+      "expected": [
+        "{\"kind\":\"text_visible\",\"text\":\"Member not found\"}"
+      ],
+      "observed": [
+        "Synthetic Member Desk | Local demonstration. All member data is fictional. | Ready | Member ID | Find member"
+      ],
+      "timestamp": "2026-09-23T00:40:46.996Z"
+    },
+    {
+      "kind": "CHECKPOINT",
+      "stepId": "discovery-1",
+      "checkpointId": "invalid",
+      "phase": "business_outcome",
+      "passed": false,
+      "expected": [
+        "{\"kind\":\"text_visible\",\"text\":\"Invalid member ID\"}"
+      ],
+      "observed": [
+        "Synthetic Member Desk | Local demonstration. All member data is fictional. | Ready | Member ID | Find member"
+      ],
+      "timestamp": "2026-09-23T00:40:46.996Z"
+    },
+    {
+      "kind": "TARGET_RESOLVED",
+      "stepId": "discovery-1",
+      "targetId": "member",
+      "strategyKind": "selector",
+      "timestamp": "2026-09-23T00:40:46.999Z"
+    },
+    {
+      "kind": "POLICY_DECISION",
+      "stepId": "discovery-1",
+      "disposition": "ALLOW",
+      "code": "POLICY_ALLOWED",
+      "reason": "Action and destination are within configured authority.",
+      "timestamp": "2026-09-23T00:40:47.002Z"
+    },
+    {
+      "kind": "ACTION_RESULT",
+      "stepId": "discovery-1",
+      "attempt": 1,
+      "ok": true,
+      "timestamp": "2026-09-23T00:40:47.011Z"
+    },
+    {
+      "kind": "CHECKPOINT",
+      "stepId": "discovery-1",
+      "checkpointId": "missing",
+      "phase": "business_outcome",
+      "passed": false,
+      "expected": [
+        "{\"kind\":\"text_visible\",\"text\":\"Member not found\"}"
+      ],
+      "observed": [
+        "Synthetic Member Desk | Local demonstration. All member data is fictional. | Ready | Member ID | Find member"
+      ],
+      "timestamp": "2026-09-23T00:40:47.012Z"
+    },
+    {
+      "kind": "CHECKPOINT",
+      "stepId": "discovery-1",
+      "checkpointId": "invalid",
+      "phase": "business_outcome",
+      "passed": false,
+      "expected": [
+        "{\"kind\":\"text_visible\",\"text\":\"Invalid member ID\"}"
+      ],
+      "observed": [
+        "Synthetic Member Desk | Local demonstration. All member data is fictional. | Ready | Member ID | Find member"
+      ],
+      "timestamp": "2026-09-23T00:40:47.013Z"
+    },
+    {
+      "kind": "STEP_COMPLETED",
+      "stepId": "discovery-1",
+      "timestamp": "2026-09-23T00:40:47.013Z"
+    },
+    {
+      "kind": "STEP_STARTED",
+      "stepId": "discovery-2",
+      "timestamp": "2026-09-23T00:40:47.013Z"
+    },
+    {
+      "kind": "SESSION_STATE",
+      "stepId": "discovery-2",
+      "state": "active",
+      "timestamp": "2026-09-23T00:40:47.014Z"
+    },
+    {
+      "kind": "POLICY_DECISION",
+      "stepId": "discovery-2",
+      "disposition": "ALLOW",
+      "code": "POLICY_ALLOWED",
+      "reason": "Action and destination are within configured authority.",
+      "timestamp": "2026-09-23T00:40:47.018Z"
+    },
+    {
+      "kind": "CHECKPOINT",
+      "stepId": "discovery-2",
+      "checkpointId": "missing",
+      "phase": "business_outcome",
+      "passed": false,
+      "expected": [
+        "{\"kind\":\"text_visible\",\"text\":\"Member not found\"}"
+      ],
+      "observed": [
+        "Synthetic Member Desk | Local demonstration. All member data is fictional. | Ready | Member ID | Find member"
+      ],
+      "timestamp": "2026-09-23T00:40:47.019Z"
+    },
+    {
+      "kind": "CHECKPOINT",
+      "stepId": "discovery-2",
+      "checkpointId": "invalid",
+      "phase": "business_outcome",
+      "passed": false,
+      "expected": [
+        "{\"kind\":\"text_visible\",\"text\":\"Invalid member ID\"}"
+      ],
+      "observed": [
+        "Synthetic Member Desk | Local demonstration. All member data is fictional. | Ready | Member ID | Find member"
+      ],
+      "timestamp": "2026-09-23T00:40:47.019Z"
+    },
+    {
+      "kind": "CHECKPOINT",
+      "stepId": "discovery-2",
+      "checkpointId": "operator-ready",
+      "phase": "precondition",
+      "passed": true,
+      "expected": [
+        "{\"kind\":\"text_visible\",\"text\":\"Ready\"}"
+      ],
+      "observed": [
+        "Synthetic Member Desk | Local demonstration. All member data is fictional. | Ready | Member ID | Find member"
+      ],
+      "timestamp": "2026-09-23T00:40:47.020Z"
+    },
+    {
+      "kind": "EVIDENCE",
+      "stepId": "discovery-2",
+      "evidence": {
+        "id": "browser-evidence-c01891ae-52fb-438e-9ee4-478206e7eb84-0",
+        "kind": "snapshot",
+        "path": "replay/browser-evidence-c01891ae-52fb-438e-9ee4-478206e7eb84-0.json",
+        "metadata": {
+          "format": "structural-dom-v1"
+        }
+      },
+      "timestamp": "2026-09-23T00:40:47.030Z"
+    },
+    {
+      "kind": "TARGET_RESOLVED",
+      "stepId": "discovery-2",
+      "targetId": "find",
+      "strategyKind": "selector",
+      "timestamp": "2026-09-23T00:40:47.032Z"
+    },
+    {
+      "kind": "POLICY_DECISION",
+      "stepId": "discovery-2",
+      "disposition": "ALLOW",
+      "code": "POLICY_ALLOWED",
+      "reason": "Action and destination are within configured authority.",
+      "timestamp": "2026-09-23T00:40:47.035Z"
+    },
+    {
+      "kind": "ACTION_RESULT",
+      "stepId": "discovery-2",
+      "attempt": 1,
+      "ok": true,
+      "timestamp": "2026-09-23T00:40:47.055Z"
+    },
+    {
+      "kind": "CHECKPOINT",
+      "stepId": "discovery-2",
+      "checkpointId": "missing",
+      "phase": "business_outcome",
+      "passed": false,
+      "expected": [
+        "{\"kind\":\"text_visible\",\"text\":\"Member not found\"}"
+      ],
+      "observed": [
+        "Synthetic Member Desk | Local demonstration. All member data is fictional. | Ready | Member ID | Find member | Loading"
+      ],
+      "timestamp": "2026-09-23T00:40:47.056Z"
+    },
+    {
+      "kind": "CHECKPOINT",
+      "stepId": "discovery-2",
+      "checkpointId": "invalid",
+      "phase": "business_outcome",
+      "passed": false,
+      "expected": [
+        "{\"kind\":\"text_visible\",\"text\":\"Invalid member ID\"}"
+      ],
+      "observed": [
+        "Synthetic Member Desk | Local demonstration. All member data is fictional. | Ready | Member ID | Find member | Loading"
+      ],
+      "timestamp": "2026-09-23T00:40:47.056Z"
+    },
+    {
+      "kind": "STEP_COMPLETED",
+      "stepId": "discovery-2",
+      "timestamp": "2026-09-23T00:40:47.056Z"
+    },
+    {
+      "kind": "STEP_STARTED",
+      "stepId": "discovery-3",
+      "timestamp": "2026-09-23T00:40:47.056Z"
+    },
+    {
+      "kind": "SESSION_STATE",
+      "stepId": "discovery-3",
+      "state": "active",
+      "timestamp": "2026-09-23T00:40:47.057Z"
+    },
+    {
+      "kind": "POLICY_DECISION",
+      "stepId": "discovery-3",
+      "disposition": "ALLOW",
+      "code": "POLICY_ALLOWED",
+      "reason": "Action and destination are within configured authority.",
+      "timestamp": "2026-09-23T00:40:47.060Z"
+    },
+    {
+      "kind": "CHECKPOINT",
+      "stepId": "discovery-3",
+      "checkpointId": "missing",
+      "phase": "business_outcome",
+      "passed": false,
+      "expected": [
+        "{\"kind\":\"text_visible\",\"text\":\"Member not found\"}"
+      ],
+      "observed": [
+        "Synthetic Member Desk | Local demonstration. All member data is fictional. | Ready | Member ID | Find member | Loading"
+      ],
+      "timestamp": "2026-09-23T00:40:47.061Z"
+    },
+    {
+      "kind": "CHECKPOINT",
+      "stepId": "discovery-3",
+      "checkpointId": "invalid",
+      "phase": "business_outcome",
+      "passed": false,
+      "expected": [
+        "{\"kind\":\"text_visible\",\"text\":\"Invalid member ID\"}"
+      ],
+      "observed": [
+        "Synthetic Member Desk | Local demonstration. All member data is fictional. | Ready | Member ID | Find member | Loading"
+      ],
+      "timestamp": "2026-09-23T00:40:47.062Z"
+    },
+    {
+      "kind": "CHECKPOINT",
+      "stepId": "discovery-3",
+      "checkpointId": "missing",
+      "phase": "business_outcome",
+      "passed": true,
+      "expected": [
+        "{\"kind\":\"text_visible\",\"text\":\"Member not found\"}"
+      ],
+      "observed": [
+        "Synthetic Member Desk | Local demonstration. All member data is fictional. | Ready | Member ID | Find member | Member not found"
+      ],
+      "timestamp": "2026-09-23T00:40:48.070Z"
+    },
+    {
+      "kind": "EVIDENCE",
+      "stepId": "discovery-3",
+      "evidence": {
+        "id": "browser-evidence-c01891ae-52fb-438e-9ee4-478206e7eb84-1",
+        "kind": "snapshot",
+        "path": "replay/browser-evidence-c01891ae-52fb-438e-9ee4-478206e7eb84-1.json",
+        "metadata": {
+          "format": "structural-dom-v1"
+        }
+      },
+      "timestamp": "2026-09-23T00:40:48.074Z"
+    }
+  ],
+  "stepId": "discovery-3"
+}

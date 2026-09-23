@@ -122,6 +122,9 @@ describe("P0 evidence persistence boundary", () => {
       });
       const files = await scan(directory); expect(files.length).toBeGreaterThan(4);
       const persisted = await readFile(join(directory, "discovery.json"), "utf8");
+      for (const event of JSON.parse(persisted).trace) {
+        if (event.kind === "EVIDENCE") expect(JSON.parse(await readFile(event.evidence.path, "utf8"))).toHaveProperty("structure");
+      }
       expect(persisted).toContain("Public diagnostic"); expect(persisted).toContain('"balance": "[REDACTED]"');
       if (artifact) expect(parseCapabilityArtifact(JSON.parse(await readFile(join(directory, "artifact.json"), "utf8"))).provenance.discoveryRunId).toBe(req.runId);
     } finally { await browser.close(); }

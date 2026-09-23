@@ -1,0 +1,51 @@
+{
+  "runId": "cd70493f-ed42-4aa5-85e6-245d19b81f30",
+  "startedAt": "2026-09-23T00:30:45.610Z",
+  "completedAt": "2026-09-23T00:30:54.675Z",
+  "discoveryMode": "live-model",
+  "modelCallsDuringReplay": 0,
+  "target": "http://127.0.0.1:4173/",
+  "scenario": "normal",
+  "provider": {
+    "provider": "openai",
+    "model": "gpt-4.1-mini",
+    "calls": [
+      {
+        "model": "gpt-4.1-mini-2025-04-14",
+        "startedAt": "2026-09-23T00:30:46.168Z",
+        "completedAt": "2026-09-23T00:30:49.546Z",
+        "httpStatus": 200,
+        "requestId": "req_e3976622b5d744919706d3f09b18292a",
+        "responseId": "resp_0af1329ca2e26199016ab31db7a9dc87d1b7d78e84c1a3941b",
+        "status": "completed"
+      },
+      {
+        "model": "gpt-4.1-mini-2025-04-14",
+        "startedAt": "2026-09-23T00:30:49.727Z",
+        "completedAt": "2026-09-23T00:30:51.103Z",
+        "httpStatus": 200,
+        "requestId": "req_53c9269495ad455f90bf5f5c6b7ceda5",
+        "responseId": "resp_0cc2f59c41eb395d016ab31db9de7c87d1b9a6a250c33f97fb",
+        "status": "completed"
+      },
+      {
+        "model": "gpt-4.1-mini-2025-04-14",
+        "startedAt": "2026-09-23T00:30:51.219Z",
+        "completedAt": "2026-09-23T00:30:52.306Z",
+        "httpStatus": 200,
+        "requestId": "req_14c498f2125640249427001edddcb3bf",
+        "responseId": "resp_043b7f287c3cce3b016ab31dbb54c887d1b3885c1e85c2ff88",
+        "status": "completed"
+      },
+      {
+        "model": "gpt-4.1-mini-2025-04-14",
+        "startedAt": "2026-09-23T00:30:52.339Z",
+        "completedAt": "2026-09-23T00:30:54.249Z",
+        "httpStatus": 200,
+        "requestId": "req_457cc624bbb446f7a5243676cd7fe37e",
+        "responseId": "resp_07c85d20760ec379016ab31dbc83fc87d193b3d58d8e5e9c51",
+        "status": "completed"
+      }
+    ]
+  }
+}

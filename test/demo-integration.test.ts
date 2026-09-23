@@ -1,5 +1,6 @@
+import { chromium } from "playwright";
 import { describe, expect, it, vi } from "vitest";
-import { mkdtemp, readFile, readdir } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runDemo } from "../src/demo/run-demo.js";
@@ -59,7 +60,7 @@ describe("offline full-system acceptance", () => {
     try {
       expect((await fetch(`${reserved.url}missing`)).status).toBe(404);
       await expect(startDemoApp(Number(new URL(reserved.url).port))).rejects.toThrow();
-      await expect(runDemo({ directory, memberId: "DEMO-002", port: 0, scenario: "normal", live: false, artifactPath: join(original.directory, "artifact.json") })).rejects.toThrow("ARTIFACT_ORIGIN_MISMATCH");
+      await expect(runDemo({ directory, memberId: "DEMO-002", port: 0, scenario: "normal", live: false, artifactPath: join(original.directory, "artifact.json") })).rejects.toMatchObject({ code: "ARTIFACT_ORIGIN_MISMATCH" });
     } finally { await reserved.close(); }
     await expect(reserved.close()).rejects.toThrow();
   }, 15000);
@@ -108,4 +109,33 @@ describe("discovery-to-operator integration", () => {
     const handoff = await readFile(join(directory, id!, "discovery-handoff.json"), "utf8");
     expect(handoff).toContain(mode === "exhausted" ? '"resumed"' : '"failed"');
   }, 15000);
+});
+
+
+describe("safe demo setup diagnostics", () => {
+  it("rejects unreadable and invalid artifacts before launching a browser", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "demo-input-errors-"));
+    const options = { directory, memberId: "DEMO-001", port: 0, scenario: "normal", live: false };
+    const launch = vi.spyOn(chromium, "launch");
+    try {
+      await expect(runDemo({ ...options, artifactPath: join(directory, "missing.json") })).rejects.toMatchObject({ code: "ARTIFACT_READ_FAILED" });
+      const artifactPath = join(directory, "invalid.json");
+      for (const content of ["not json", "{}"] ) {
+        await writeFile(artifactPath, content);
+        await expect(runDemo({ ...options, artifactPath })).rejects.toMatchObject({ code: "ARTIFACT_INVALID" });
+      }
+      expect(launch).not.toHaveBeenCalled();
+    } finally { launch.mockRestore(); }
+  });
+  it("reports safe server and browser setup failures", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "demo-setup-errors-"));
+    const app = await startDemoApp(0);
+    try {
+      await expect(runDemo({ directory, memberId: "DEMO-001", port: Number(new URL(app.url).port), scenario: "normal", live: false })).rejects.toMatchObject({ code: "DEMO_SERVER_UNAVAILABLE" });
+    } finally { await app.close(); }
+    const launch = vi.spyOn(chromium, "launch").mockRejectedValue(new Error("DO_NOT_ECHO_SECRET"));
+    try {
+      await expect(runDemo({ directory, memberId: "DEMO-001", port: 0, scenario: "normal", live: false })).rejects.toMatchObject({ code: "BROWSER_LAUNCH_FAILED", message: expect.not.stringContaining("DO_NOT_ECHO_SECRET") });
+    } finally { launch.mockRestore(); }
+  });
 });

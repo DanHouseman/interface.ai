@@ -19,6 +19,8 @@ import { demoSpecification } from "./specification.js";
 import { startDemoApp } from "./target-app.js";
 
 export interface DemoOptions {
+  readonly onProgress?: (phase: string) => void;
+  readonly signal?: AbortSignal;
   readonly directory: string;
   readonly memberId: string;
   readonly port: number;
@@ -27,6 +29,7 @@ export interface DemoOptions {
   readonly artifactPath?: string;
   readonly live: boolean;
   readonly headless?: boolean;
+  readonly slowMoMs?: number;
   readonly operator?: (page: Page, request: InterventionRequest, signal?: AbortSignal) => Promise<void>;
 }
 
@@ -34,9 +37,27 @@ export interface DemoOptions {
 // Discovery and saved-artifact replay use separate browser contexts. The replay branch
 // never calls the model. Evidence records whether discovery was real or an offline fixture.
 export async function runDemo(options: DemoOptions) {
-  const app = await startDemoApp(options.port);
+  options.signal?.throwIfAborted();
+  options.onProgress?.("Preparing application");
+  // Validate saved input before opening a window, and expose only fixed safe diagnostics.
+  let savedArtifact: CapabilityArtifact | undefined;
+  if (options.artifactPath) {
+    let serialized: string;
+    try { serialized = await readFile(options.artifactPath, "utf8"); }
+    catch { throw new ExecutionError("ARTIFACT_READ_FAILED", "Cannot read --artifact. Check that the file exists; use evidence/submission/genuine-discovery/artifact.json for the included example."); }
+    try { savedArtifact = parseCapabilityArtifact(JSON.parse(serialized)); }
+    catch { throw new ExecutionError("ARTIFACT_INVALID", "The saved file is not a valid capability artifact. Use artifact.json from a successful discovery run."); }
+  }
+  let app: Awaited<ReturnType<typeof startDemoApp>>;
+  try { app = await startDemoApp(options.port); }
+  catch { throw new ExecutionError("DEMO_SERVER_UNAVAILABLE", "Cannot start the local demo server. Check that the requested port is available."); }
   try {
-    const browser = await chromium.launch({ headless: options.headless ?? options.operator === undefined });
+    let browser: Awaited<ReturnType<typeof chromium.launch>>;
+    try { browser = await chromium.launch({ headless: options.headless ?? options.operator === undefined, slowMo: options.slowMoMs ?? 0 }); }
+    catch { throw new ExecutionError("BROWSER_LAUNCH_FAILED", "Chromium could not start. Run npx playwright install chromium and verify that a desktop session is available for headed mode."); }
+    const abort = () => { void browser.close().catch(Boolean); };
+    options.signal?.addEventListener("abort", abort, { once: true });
+    if (options.signal?.aborted) abort();
     try {
       const runId = randomUUID();
       const startedAt = new Date().toISOString();
@@ -44,8 +65,9 @@ export async function runDemo(options: DemoOptions) {
       const inputs = { memberId: options.memberId };
       let artifact: CapabilityArtifact;
       let discovery: JsonValue = null;
-      if (options.artifactPath) artifact = parseCapabilityArtifact(JSON.parse(await readFile(options.artifactPath, "utf8")));
+      if (savedArtifact) artifact = savedArtifact;
       else {
+        options.onProgress?.("Discovering capability");
         if (!options.model) throw new Error("DISCOVERY_MODEL_REQUIRED");
         const context = await browser.newContext({ serviceWorkers: "block" });
         const page = await context.newPage();
@@ -71,6 +93,7 @@ export async function runDemo(options: DemoOptions) {
           const stopped = JSON.parse(await readFile(join(directory, "discovery.json"), "utf8"));
           throw new ExecutionError("DEMO_DISCOVERY_FAILED", `Discovery stopped: ${stopped.code}; provider: ${JSON.stringify(saved.provider)}; evidence: ${directory}`);
         }
+        options.onProgress?.("Saving verified capability");
         artifact = new CapabilityCompiler().compile(request, result);
         discovery = result as unknown as JsonValue;
         // Discovery evidence survives a subsequent replay/setup failure.
@@ -82,7 +105,8 @@ export async function runDemo(options: DemoOptions) {
         await context.close();
       }
       // A saved capability must still authorize this exact local server; no silent rebinding.
-      if (!artifact.policy.permittedTargets.includes(new URL(app.url).origin)) throw new Error("ARTIFACT_ORIGIN_MISMATCH: use the same --port as discovery.");
+      if (!artifact.policy.permittedTargets.includes(new URL(app.url).origin)) throw new ExecutionError("ARTIFACT_ORIGIN_MISMATCH", "Use the same --port as discovery; the included example uses 4173.");
+      options.onProgress?.("Replaying saved steps (zero model calls)");
       const context = await browser.newContext({ serviceWorkers: "block" });
       const page = await context.newPage();
       const surface = new PlaywrightSurfaceAdapter(page, { evidenceDirectory: join(directory, "replay") });
@@ -105,7 +129,7 @@ export async function runDemo(options: DemoOptions) {
         manifest: { runId, startedAt, completedAt: new Date().toISOString(), discoveryMode: options.artifactPath ? "saved-artifact-replay" : options.live ? "live-model" : "offline-scripted-fixture", modelCallsDuringReplay: 0, target: app.url, scenario: options.scenario, provider: options.model?.metadata?.() ?? null },
       });
       return { directory, result, artifact };
-    } finally { await browser.close(); }
+    } finally { options.signal?.removeEventListener("abort", abort); await browser.close(); }
   } finally { await app.close(); }
 }
 
