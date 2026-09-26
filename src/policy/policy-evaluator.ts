@@ -1,3 +1,4 @@
+import { isRiskyAction, resolveActionValue } from "../domain/action.js";
 import type { CapabilityArtifact, CapabilityStep } from "../artifact/capability-schema.js";
 import type { ExecutionContext } from "../domain/contracts.js";
 import type { Observation } from "../surface/surface-adapter.js";
@@ -33,16 +34,14 @@ export class ConfigurablePolicyEvaluator implements PolicyEvaluator {
         return deny("TARGET_NOT_ALLOWED", "Browser location is unavailable.");
       }
       if (step.action.type === "navigate") {
-        const source = step.action.value;
-        const value = source?.kind === "input" ? context.inputs[source.input] : source?.value;
+        const value = resolveActionValue(step.action, context.inputs);
         if (typeof value !== "string") return deny("TARGET_NOT_ALLOWED", "Navigation requires an absolute authorized URL.");
         const decision = evaluateLocation(value, policy);
         if (decision) return decision;
       }
     }
     // Submit/custom are conservative even if an artifact incorrectly labels their effect.
-    const risky = step.action.effect === "irreversible_write" || step.action.effect === "privileged"
-      || step.action.type === "submit" || step.action.type === "custom";
+    const risky = isRiskyAction(step.action);
     if ((risky || step.humanApprovalRequired) && !context.authorization?.approvedStepIds?.includes(step.id)) {
       return deny("APPROVAL_REQUIRED", `Step '${step.id}' requires explicit invocation approval.`);
     }

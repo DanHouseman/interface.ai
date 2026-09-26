@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { JsonValue } from "../domain/contracts.js";
-import type { EvidenceReference, Observation, SurfaceAdapter } from "../surface/surface-adapter.js";
+import type { EvidenceReference, Observation, HandoffSurface } from "../surface/surface-adapter.js";
 
 export interface InterventionRequest { readonly id: string; readonly invocationId: string; readonly capabilityId: string; readonly stepId?: string; readonly reason: string; readonly observation: Observation; readonly evidence: EvidenceReference; }
 export interface HumanActionRecord { readonly timestamp: string; readonly operatorId: string; readonly description: string; readonly metadata?: Readonly<Record<string, JsonValue>>; }
@@ -12,7 +12,7 @@ export interface InterventionRouter { route(request: InterventionRequest): Promi
 // paused, never silently returned to automation. The verifier runs while humans own it.
 export class HumanHandoffCoordinator {
   private active = false;
-  public constructor(private readonly surface: SurfaceAdapter, private readonly router: InterventionRouter) {}
+  public constructor(private readonly surface: HandoffSurface, private readonly router: InterventionRouter) {}
   public async intervene(input: { invocationId: string; capabilityId: string; stepId?: string; reason: string }, verify: (observation: Observation) => boolean, signal?: AbortSignal) {
     if (this.active) throw new Error("INTERVENTION_CONFLICT");
     this.active = true;

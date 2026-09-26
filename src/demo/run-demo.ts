@@ -15,10 +15,12 @@ import { recordHumanActions } from "../hitl/browser-recorder.js";
 import { ConfigurablePolicyEvaluator } from "../policy/policy-evaluator.js";
 import { DeterministicReplayEngine } from "../replay/replay-engine.js";
 import { PlaywrightSurfaceAdapter } from "../surface/playwright-surface-adapter.js";
-import { demoSpecification } from "./specification.js";
+import { demoSpecification, demoRequest, demoPermissionDeniedSelector } from "./specification.js";
 import { startDemoApp } from "./target-app.js";
 
 export interface DemoOptions {
+  readonly goal?: string;
+  readonly target?: string;
   readonly onProgress?: (phase: string) => void;
   readonly signal?: AbortSignal;
   readonly directory: string;
@@ -37,6 +39,7 @@ export interface DemoOptions {
 // Discovery and saved-artifact replay use separate browser contexts. The replay branch
 // never calls the model. Evidence records whether discovery was real or an offline fixture.
 export async function runDemo(options: DemoOptions) {
+  const requested = demoRequest(options);
   options.signal?.throwIfAborted();
   options.onProgress?.("Preparing application");
   // Validate saved input before opening a window, and expose only fixed safe diagnostics.
@@ -71,13 +74,13 @@ export async function runDemo(options: DemoOptions) {
         if (!options.model) throw new Error("DISCOVERY_MODEL_REQUIRED");
         const context = await browser.newContext({ serviceWorkers: "block" });
         const page = await context.newPage();
-        const surface = new PlaywrightSurfaceAdapter(page, { evidenceDirectory: join(directory, "discovery") });
+        const surface = new PlaywrightSurfaceAdapter(page, { permissionDeniedSelector: demoPermissionDeniedSelector, evidenceDirectory: join(directory, "discovery") });
         const specification = demoSpecification(app.url);
         await surface.guard(specification.policy);
         await page.goto(options.scenario === "discovery-handoff" ? `${app.url}?scenario=handoff` : app.url);
         const discoveryActions = await recordHumanActions(page, surface, "local-operator");
         const discoveryHandoffs: JsonValue[] = [];
-        const request: DiscoveryRequest = { runId, goal: "Find the supplied member and read their current savings balance from the member detail screen.", target: app.url, maxSteps: 15, timeoutMs: 120000, specification, inputs };
+        const request: DiscoveryRequest = { runId, goal: requested.goal, target: app.url, maxSteps: 15, timeoutMs: 120000, specification, inputs };
         const result = await new DiscoveryEngine(surface, options.model).run(request, options.operator ? {
           intervene: async (stopped, signal) => {
             await operatorHandoff(page, surface, options.operator!, discoveryActions, discoveryHandoffs,
@@ -109,7 +112,7 @@ export async function runDemo(options: DemoOptions) {
       options.onProgress?.("Replaying saved steps (zero model calls)");
       const context = await browser.newContext({ serviceWorkers: "block" });
       const page = await context.newPage();
-      const surface = new PlaywrightSurfaceAdapter(page, { evidenceDirectory: join(directory, "replay") });
+      const surface = new PlaywrightSurfaceAdapter(page, { permissionDeniedSelector: demoPermissionDeniedSelector, evidenceDirectory: join(directory, "replay") });
       await surface.guard(artifact.policy);
       await page.goto(`${app.url}?scenario=${encodeURIComponent(options.scenario)}`);
       const actions = await recordHumanActions(page, surface, "local-operator");

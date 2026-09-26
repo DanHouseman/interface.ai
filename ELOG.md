@@ -1,5 +1,65 @@
 # Implementation Progress
 
+## 09/26/2026 Assignment Alignment Fixes
+
+### Completed
+
+- Added discovery `--goal` and `--target` arguments. The supported target is the application ID `synthetic-member-desk`, resolved to the local app started on `--port`. Shared validation rejects blank/oversized goals and unsupported targets before execution. Replay/handoff reject CLI goal/target overrides because their behavior comes from the saved artifact.
+- Passed caller goal text through `runDemo` to the discovery model. Changed the existing GUI goal control to a text input and forwarded it to the same backend. Reviewed grants, output contracts, and success conditions remain limited to member lookup; goal text cannot authorize other tasks. The offline fixture still follows its script.
+- Centralized final discovery evidence capture after the loop returns, covering stuck, step limit, failed completion/preconditions, and policy denial. Exceptions retain capture through the existing error path. Capture failure preserves the original result; invalid requests and run conflicts do not inspect an active session.
+- Added an optional host-configured permission-denial selector to the browser adapter. The demo binds it to its exact result indicator. Resolution checks it before targeting and after resolution failure; execution checks it before performing an action. Typed `PERMISSION_DENIED` errors survive replay action construction. Unrelated page text does not trigger the indicator, and ordinary missing-target failures remain distinct.
+- Added CLI configuration, goal forwarding, terminal evidence, GUI input, and browser permission-denial regressions. The real-browser stuck test reads the persisted structural snapshot, and replay tests verify that denial prevents the next action.
+- Updated README commands and options, rewrote REPORT under the required seven headings to describe current behavior and limits, and removed stale validation/delivery claims. Existing curated evidence was left unchanged.
+
+### Validation
+
+- `npm run typecheck` and `node --check src/gui/panel.js` passed.
+- Focused CLI/discovery/browser/GUI suite passed: 118 tests.
+- `npm test -- --coverage` passed: 260 tests across 19 files with 100% configured statements, branches, functions, and lines. No authenticated model calls were made.
+- `npm run verify:evidence` passed, including build: 81 hashed files, nine parsed artifacts, zero tested sensitive matches, and all referenced snapshots resolved.
+- `git diff --check` passed.
+
+### Scope
+
+- No new framework, transport, service, infrastructure, or artifact schema was introduced.
+- Public access, remote CI, and submission email remain unverified delivery items, separate from these local fixes.
+
+## 09/26/2026 Execution Refactor and GUI State Streaming
+
+### Completed
+
+- Extracted replay invocation validation into `src/replay/validate-invocation.ts` and action construction into `src/replay/action-builder.ts`. Replay retains orchestration, authorization, trace ordering, recovery, and handoff decisions.
+- Centralized input/literal value binding and runtime risk classification in `src/domain/action.ts`. Discovery keeps its distinct validation and custom-action restrictions. Artifact retry validation continues to use declared effects; runtime policy also treats submit/custom actions as risky.
+- Split surface contracts by responsibility. Replay and discovery consume `ExecutionSurface`, checkpoints consume `CheckpointSurface`, and handoff consumes `HandoffSurface`. Existing adapters retain the full `SurfaceAdapter` contract.
+- Replaced the GUI's one-second `/api/state` polling loop with one native `EventSource` connection to `/api/events`. Setup changes, run progress, model-call counts, handoff, cancellation, and completion publish state snapshots. Commands retain token-protected POSTs and existing local-origin checks.
+- Added `src/gui/state-stream.ts` to own subscriptions, snapshot framing, disconnect cleanup, and shutdown. A blocked client retains only its newest pending snapshot while the response buffer drains; other clients continue receiving updates.
+- Added fresh snapshots and session tokens on reconnect, disabled execution controls while disconnected, closed streams on page navigation, and cleared stale run displays after a server restart.
+- Kept `/api/state` available for explicit snapshots and diagnostics. Library refreshes are serialized and occur on connection, explicit refresh, and run completion. Run validation independently scans saved artifacts before execution.
+- Added surface-contract tests, stream lifecycle/backpressure tests, and browser coverage for zero panel state GETs, pushed updates, restart/reconnect, token renewal, and manual artifact refresh. Made the default-port test bind an ephemeral port while asserting that the launcher requests port 4310, avoiding interference with a running GUI.
+- Updated README with execution boundaries, stream behavior, refresh semantics, and current validation counts.
+
+### Design Decisions and Limits
+
+- Keep client snapshots as ordinary parsed JSON and replace them on each event, with form state held separately. Removed runtime deep freezing and its dedicated assertions: traversing each snapshot adds work without an established mutation defect in this panel. No performance improvement has been benchmarked.
+
+- State updates flow from server to browser, so SSE fits the existing HTTP command API. WebSocket remains an option if bidirectional streaming becomes necessary; this application has no gRPC backend to reuse.
+- Reconnect sends current state rather than replaying every transport event. Each snapshot contains the retained run history and activity records. Slow clients may skip intermediate snapshots.
+- Elapsed time updates when state arrives. Artifacts created by another process appear after **Refresh** or reconnection. There is no periodic network refresh or filesystem watcher.
+- Existing approval, ambiguous-commit, retry, redaction, and handoff behavior was preserved. The refactor does not introduce new permissions or model calls.
+
+### Validation
+
+- `npm run typecheck` passed.
+- `npm test -- --coverage` passed: 248 tests across 19 test files; 100% configured statements, branches, functions, and lines. Coverage measures TypeScript production modules; `panel.js` is exercised through browser tests.
+- Browser tests confirmed one initial event-stream request and zero panel `/api/state` requests across ten seconds of advanced browser time, then verified pushed state, cancellation, automatic reconnect after restart, commands using the renewed token, and explicit artifact refresh.
+- `npm run verify:evidence` passed, including its build step: 81 hashed files, nine parsed artifacts, zero tested sensitive matches, and all referenced snapshots resolved.
+- `git diff --check` passed. Browser/server tests required execution outside the filesystem sandbox so Chromium and local listeners could start.
+
+### Applying the Update
+
+- Restart the running GUI process and reload the panel to use the updated server and browser code. The existing GUI process was left running during development.
+- Commit creation, publication, and remote CI remain separate steps.
+
 ## 09/22/2026 GUI Control Panel, Setup Script, and Coverage Closure
 
 ### Completed

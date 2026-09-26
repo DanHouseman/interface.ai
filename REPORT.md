@@ -1,76 +1,69 @@
 # Interface.ai Computer-Use Automation
 
-> Audit remediation: failed-replay diagnostic privacy, discovery-time human takeover, and curated submission evidence are repaired and locally verified. Publication and remote CI are separate from local verification.
-
-Validation status: September 22, 2026. Implemented behavior and observed results are distinguished below from proposed extensions. Reproduction commands are in [README.md](./README.md); detailed run records are in [P0_SECURITY_VALIDATION.md](./P0_SECURITY_VALIDATION.md).
+Implementation status: September 26, 2026. Setup and exact demonstration commands are in [README.md](./README.md). Historical run provenance and limitations are in [evidence/submission/README.md](./evidence/submission/README.md).
 
 ## Architecture
 
 The single-process TypeScript application separates discovery, authority, compilation, and replay:
 
 ```text
-Goal + specification -> LLM proposals -> host validation -> external policy
-                    -> browser actions -> verified discovery trace
-                    -> compiled capability -> deterministic replay
+Goal + reviewed application specification -> LLM proposals -> host policy
+  -> real browser actions -> verified trace -> capability artifact
+  -> deterministic replay with new inputs -> structured result
 ```
 
-OpenAI Responses API discovery operates a real, local synthetic member UI through Playwright. The host supplies a predeclared target catalog, action grants, typed inputs, and completion checkpoints. This restricts discovery to choosing an authorized workflow; it does not discover arbitrary applications or invent selectors. That cut makes authority reviewable and reduces model flexibility. Model-reported completion is insufficient: the host checks the resulting UI independently.
+The CLI accepts `--goal` and `--target synthetic-member-desk`; the GUI accepts goal text for the same application. The target ID resolves to the local sample app started on `--port`. Unknown targets and blank or oversized goals are rejected before execution. The caller's goal reaches the model, while reviewed controls, grants, typed inputs, and member-lookup success conditions remain host-defined. Arbitrary applications and tasks are unsupported. This limits discovery flexibility but makes authority and completion reviewable.
 
-The compiler persists a capability before automatic replay in a fresh context. Replay has no model dependency. Playwright provides reliable browser interaction, but this demo does not establish robustness against arbitrary legacy desktop interfaces.
+OpenAI discovery operates Chromium through Playwright. The model chooses actions from the supplied controls; it cannot invent selectors or permissions. Host checkpoints verify completion. The compiler saves the capability before replay in a fresh browser context. Replay has no model dependency. The offline model is an explicitly scripted fixture, not evidence of LLM discovery.
 
-Observed genuine discovery used `gpt-4.1-mini-2025-04-14`: four completed provider calls, three UI actions, and host-verified success. The saved capability also succeeded with a second member input and zero replay model calls. These results establish this workflow's interoperability, not a general reliability rate.
+Replay validation and action construction are separate functions. Shared value binding and risk rules reduce drift between consumers. The local GUI receives snapshots through SSE and sends commands through token-protected HTTP POSTs. This is a convenience around the same execution path, not a distributed orchestration system. Client snapshots are replaced on each event without runtime deep freezing.
 
 ## Artifact schema
 
-The Zod-validated JSON contract includes schema version, capability identity/version, application and compatibility metadata, typed inputs/outputs, sensitivity declarations, external-authority constraints, ordered target strategies, steps, checkpoints, recovery rules, and discovery provenance. It contains no provider or Playwright types.
+The Zod-validated JSON artifact contains schema and capability versions, application metadata, typed inputs/outputs, sensitivity declarations, policy, ordered target strategies, actions, checkpoints, recovery rules, and discovery provenance. It is independent of provider and Playwright types.
 
-Actions bind invocation inputs by reference rather than embedding member values. The normal parser validates references and unsafe retry configurations. Targets carry ordered strategies and uniqueness requirements; the artifact defines permitted alternatives instead of allowing replay to improvise. Completion and business-outcome predicates express what must be observed after an action.
+Actions bind invocation inputs by name rather than embedding member values. Parsing checks target/input references, output sources, and unsafe retry configurations. The compiler copies host-reviewed contracts and records successful executed actions separately from the model transcript. Sensitive literals are rejected instead of silently changing executable behavior through redaction.
 
-This is more explicit than a click recording and requires a reviewed specification. The benefit is an inspectable, parameterized capability that callers can invoke without replay-time reasoning. Compatibility tags describe intended applicability; they are not an implemented tenant registry or automatic version-certification system.
+Targets express ordered strategies and uniqueness requirements. The browser adapter supports selectors, accessible roles/labels, structural relationships, and explicit coordinates. The included workflow uses reviewed CSS IDs, which are stable in the chosen application. This does not demonstrate equivalent robustness against arbitrary legacy markup. Compatibility tags document intended applicability; they do not implement automatic version certification.
 
 ## Determinism & error handling
 
-Replay follows artifact order, resolves declared targets in order, applies bounded waits/retries, checks session and policy state, and evaluates checkpoints. Determinism refers to the execution algorithm; an asynchronous or changed UI can still fail. Missing/ambiguous targets and checkpoint failures stop execution rather than trigger locator invention.
+Replay follows artifact order, resolves declared targets deterministically, applies bounded waits/retries, checks policy and session state, verifies checkpoints, and returns typed outputs. It never asks a model to repair a failing step. Results distinguish success, expected business outcomes, recoverable conditions, intervention, and hard failure. Risky or ambiguous actions require reconciliation; unresolved commit state prohibits blind retry.
 
-Results distinguish `SUCCESS`, `BUSINESS_OUTCOME`, `RECOVERABLE`, `INTERVENTION_REQUIRED`, and `FAILURE`. A possibly committed risky operation must satisfy reconciliation checks; uncertain commit state does not permit blind retry. Evidence-capture failures are recorded separately from application outcomes where the runner can continue reporting them.
+The demo reports missing members and invalid identifiers as business outcomes. Session expiry requests intervention. A host-configured permission-denial indicator returns `PERMISSION_DENIED`, including when it appears while a target is being resolved. Unrelated page text does not trigger that classification. Missing targets without the indicator remain `TARGET_RESOLUTION_FAILED`. Classification does not alter artifact permissions or require rewriting older saved capabilities.
 
-| Observed execution | Result |
-| --- | --- |
-| Genuine discovery and automatic replay | `SUCCESS` |
-| Saved-artifact replay with second input | `SUCCESS`; zero model calls |
-| Missing member | `BUSINESS_OUTCOME / MEMBER_NOT_FOUND` |
-| Injected session expiry | `INTERVENTION_REQUIRED / SESSION_EXPIRED` |
+Structured traces identify steps, policy decisions, observed checkpoints, recovery, and evidence. After the discovery loop starts, every terminal result attempts a structural snapshot, including stuck, exhausted-budget, failed-checkpoint, and denied-action paths. Capture errors remain secondary evidence failures. Preflight rejection and concurrent-run rejection do not inspect the live session. Replay also captures failure evidence.
 
-The exceptional runs stopped before executing the blocked third step. CLI exit status alone is insufficient: these expected dispositions can exit 0. Current verification under Node 26.10.0 passes typecheck, build and 232 tests with 100% configured coverage. Prior clean-export verification used Node 24.21.0 and 202 tests. These checks also passed in a clean export of committed revision `30181831`, with a new dependency installation under Node 24.21.0. Offline discovery and saved genuine-artifact replay succeeded there. Authenticated discovery and manual handoff were not repeated in that export.
+The curated genuine run records four completed OpenAI calls, three UI actions, successful compilation, and replay. The same artifact succeeds with a second member input and zero model calls. Included exceptional replays show not-found and expired-session outcomes. Current regressions additionally cover permission denial and richer discovery failure capture. These results demonstrate this workflow, not a general reliability rate.
 
 ## Heterogeneity & multi-tenant
 
-`SurfaceAdapter` separates observation, targeting, actions, evidence, and session ownership from the recorded workflow. The schema admits accessibility, structural, visual, and terminal-field concepts; currently the concrete implementations are Playwright and the test fake. A desktop adapter would map OS accessibility or bounded visual targeting into the same contracts and explicitly reject unsupported operations. Declaring a strategy in the schema does not prove an adapter implements it.
+The artifact/replay boundary uses observations, opaque resolved targets, actions, checkpoints, evidence, and session ownership. Consumers depend on the surface capabilities they use: execution, checkpoint evaluation, or handoff. Browser-specific targeting remains inside the Playwright adapter. A legacy-web or desktop adapter could map accessibility or visual controls to these contracts and explicitly reject unsupported strategies. Only Playwright and the test fake are implemented.
 
-Proposed reuse would resolve a vendor-family base capability, then a reviewed product-version specialization, then a tenant specialization into one immutable validated artifact. Invocation inputs supply data only. Overrides should be explicit and conflict-checked; effective authority should intersect deployment policy rather than expand through tenant configuration. Changes to targets, checkpoints, or recovery would require revalidation and a new capability version.
+For future reuse, resolve a vendor-family capability with reviewed version and tenant specializations into one validated artifact. Invocation parameters supply data; overrides must be explicit and conflict-checked. Effective authority should intersect deployment policy. Changes to targets, checkpoints, or recovery require revalidation and a new version.
 
-Existing target/checkpoint failures expose some drift. A future compatibility preflight would verify version/fingerprint expectations, quarantine incompatible artifacts, and require reviewed rediscovery when bounded specialization is insufficient. Promotion would combine contract tests, representative tenant replays, and approval. Telemetry could track failure rates per artifact/version; it must never silently rewrite production behavior. Registry, override merging, automated drift classification, and promotion are design proposals, not implemented services.
+Existing checkpoint and target failures expose some drift. A future compatibility preflight could check version/fingerprint expectations, quarantine incompatible artifacts, and require reviewed rediscovery. Representative tenant replays would support promotion. Registry, override merging, drift classification, and promotion infrastructure are design proposals only.
 
 ## Escalation & handoff
 
-Replay routes intervention when session state, checkpoints, policy approval, or uncertain outcomes prevent safe continuation. `HumanHandoffCoordinator` pauses action admission, drains an in-flight action, and transfers the same adapter session to human ownership. The headed CLI exposes the existing Chromium page. The operator clicks **Release session** and explicitly signals `resume`; click/change kinds and element tags are recorded without typed values.
+Blocked discovery or replay can route an intervention request containing capability, step, reason, observation, and evidence. The coordinator pauses action admission, drains an in-flight action, and transfers ownership of the same browser session to the human. The CLI exposes the existing window and waits for explicit `resume`; the GUI supplies equivalent handback controls. Human click/change kinds and element tags are recorded without typed values.
 
-The coordinator verifies resumed state before restoring automation ownership. Replay continues at the blocked step; previously completed actions are not restarted. A human-completed uncertain operation needs reconciliation, and handback does not itself grant risky-action approval. Routing or verification failure cannot silently restore control.
+Handback verifies readiness before returning control to automation. Replay resumes at the blocked step without restarting the completed prefix. Discovery retains its original step/time budget. Handback cannot grant risky-action approval, renew the budget, or authorize an uncertain retry. Failed verification leaves automation stopped.
 
-Discovery also routes through the coordinator when `--operator` is enabled. Safe continuation retains the original budget and executed prefix; uncertain actions, missing approval and exhausted budgets cannot be bypassed. `discovery-handoff.json` records paused, handback, resumed or failed phases. Automated tests cover these seams. Genuine headed run `ae8edcd1-5ebf-4c32-b32a-417f05a797a3` succeeded after the user clicked the release control and explicitly signaled handback. Evidence records human action kinds, failed then passing readiness checks, and continuation without repeating the completed prefix. Ownership checks execute in the coordinator; individual ownership transitions are not separately persisted. An earlier attempt with a closed page correctly rejected handback. The operator identity is a local demo label, not authenticated enterprise identity; ownership is in-memory, not a durable session lease.
+Curated evidence distinguishes genuine human discovery handoff using the offline fixture from automated replay handoff tests. The live-model discovery record is separate. Ownership is in memory, and operator identity is a local label. These are deliberate limits of a minimal real handoff, not authenticated enterprise session management.
 
 ## Safety
 
-Authority comes from host contracts and external policy, never page text or model output. Origin/route/action constraints apply at runtime; irreversible and privileged actions receive conservative approval and recovery treatment. Saved demo artifacts remain bound to their original origin and port.
+Authority comes from host contracts and policy, never model output or page text. Origin, route, and action checks constrain execution. Browser request guards cover navigation and subresources. Submit/custom actions and irreversible effects receive conservative approval and recovery treatment. Saved artifacts remain bound to their recorded origin and port.
 
-Sensitive inputs stay host-bound. The model receives input metadata and sanitized observations. Contract-aware whole-bundle sanitization registers classified sensitive values before persistence, including discovery outputs seen before successful extraction. The audit exposed a replay failure where flattened checkpoint strings retained an output after extraction failed. Checkpoints now classify sensitive target/signal values and sanitize diagnostics before flattening loses that context; real-browser regressions cover four failure paths. Provider evidence retains allowlisted metadata rather than raw responses or free-form error messages. Structural DOM snapshots omit text, values, attributes, and URLs, sacrificing visual diagnostic detail to limit leakage.
+Sensitive input values remain host-bound. Model context and persisted bundles pass through contract-aware sanitization. Checkpoints classify sensitive values before flattening diagnostics into strings. Provider records retain allowlisted metadata, not raw responses. Structural snapshots omit text, values, attributes, and URLs, sacrificing diagnostic detail to reduce leakage.
 
-Transport and real-browser mocked-provider tests place canaries in live state and scan complete requests and persisted files. Scans of genuine success/replay and runtime-taxonomy bundles found zero tested sensitive values or credential patterns. These checks are scoped evidence, not universal privacy guarantees. Sensitive-target classification currently requires supported, unambiguous standard CSS selectors and fails closed otherwise; undeclared sensitivity or transformed copies remain limits to assess before broader use.
+Canary tests and evidence scans establish scoped protection, not universal absence of secrets. Sensitive-output classification currently requires supported, unambiguous standard CSS selectors. Undeclared sensitivity and transformed copies remain limits. Goal text cannot expand grants or redefine the reviewed success condition.
 
 ## Cuts
 
-The implementation deliberately omits desktop automation, a tenant registry, distributed orchestration, durable handoff leases, an authenticated operator console, and autonomous target discovery. These would obscure the current trust-boundary validation without proving the core workflow.
+The implementation omits arbitrary-app discovery, desktop automation, tenant infrastructure, queues, distributed orchestration, durable handoff leases, and a full co-browsing console. The assignment requires the core browser workflow and credible extension seams; building those systems would not establish additional correctness here.
 
-A local reviewer evidence archive is prepared. The unused standalone `chromium` dependency was removed, clearing the three reported audit findings. Clean installation, typecheck, build, all 202 coverage tests, and offline browser execution passed again. Those audited issues are repaired. The included curated evidence has a verified checksum inventory and portable snapshot references; public delivery remains outstanding. Broader production work should start with adapter/privacy limits and durable ownership, then reviewed compatibility/promotion rules. CI configuration exists; no remote CI result is asserted here.
+Validation counts and commands are maintained in README and the latest ELOG entry. Tests use scripted or mocked models and do not make authenticated provider calls. The original genuine discovery evidence remains unchanged. `npm run verify:evidence` builds the project and checks 81 hashed files, nine parsed artifacts, expected outcomes, and portable snapshot references; hashes establish integrity, not provider authenticity.
 
-Only curated `evidence/submission/` is selected for repository tracking; generated runs and archives remain ignored. The included genuine run is under `evidence/submission/genuine-discovery/`, with second-input replay, exceptional outcomes, privacy regression and separately labeled handoff proofs alongside it. `npm run verify:evidence` checks hashes, artifacts, outcomes and references without live services. Historical session-ID redaction broke some paths; uniquely matching snapshots were mapped to relative references with disclosed provenance. New snapshots use independent evidence identifiers. The assignment requires the public repository URL, not the old local reviewer ZIP.
+Before broader use, validate the adapter/privacy limits against a representative legacy surface and improve error-indicator coverage. Public repository accessibility, remote CI, and submission email require separate verification; this report does not assert their completion.

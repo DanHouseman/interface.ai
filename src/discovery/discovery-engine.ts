@@ -1,16 +1,17 @@
+import { resolveActionValue } from "../domain/action.js";
 import { capabilityArtifactSchema, type CapabilityStep } from "../artifact/capability-schema.js";
 import type { ExecutionContext } from "../domain/contracts.js";
 import { ConfigurablePolicyEvaluator, evaluateLocation } from "../policy/policy-evaluator.js";
 import { evaluateCheckpoint } from "../replay/checkpoint-evaluator.js";
 import { withDeadline } from "../runtime/deadline.js";
 import { ExecutionError } from "../runtime/errors.js";
-import type { SurfaceAction, SurfaceAdapter } from "../surface/surface-adapter.js";
+import type { SurfaceAction, ExecutionSurface } from "../surface/surface-adapter.js";
 import { discoveryDecisionSchema, type DiscoveryModel, type DiscoveryOptions, type DiscoveryRequest, type DiscoveryResult, type DiscoveryTraceEvent } from "./discovery-contracts.js";
 
 // Milestone 5, 7, 9 | Assignment §3.1, §3.4-3.5 | REQ-DISC-001..004
 export class DiscoveryEngine {
   private running = false;
-  public constructor(private readonly surface: SurfaceAdapter, private readonly model: DiscoveryModel) {}
+  public constructor(private readonly surface: ExecutionSurface, private readonly model: DiscoveryModel) {}
   public async run(request: DiscoveryRequest, options: DiscoveryOptions = {}): Promise<DiscoveryResult> {
     const trace: DiscoveryTraceEvent[] = [];
     const fail = (code: string, message: string, disposition: "FAILURE" | "INTERVENTION_REQUIRED" = "FAILURE"): DiscoveryResult => ({ disposition, runId: request.runId, code, message, trace });
@@ -19,7 +20,7 @@ export class DiscoveryEngine {
     try {
       if (!Number.isInteger(request.maxSteps) || request.maxSteps < 1 || !Number.isFinite(request.timeoutMs) || request.timeoutMs <= 0) return fail("INVALID_REQUEST", "Positive step and timeout bounds are required.");
       if (evaluateLocation(request.target, request.specification.policy)) return fail("POLICY_DENIED", "Entry point is outside discovery authority.");
-      return await withDeadline(request.timeoutMs, async (signal) => {
+      const result = await withDeadline<DiscoveryResult>(request.timeoutMs, async (signal) => {
         const intervene = async (code: string, step: number, canContinue: boolean): Promise<boolean> => {
           if (!options.intervene) return false;
           const requested = await options.intervene({ code, step, canContinue }, signal);
@@ -59,7 +60,6 @@ export class DiscoveryEngine {
               if (await intervene("GOAL_NOT_VERIFIED", index, index < request.maxSteps)) continue;
               return fail("GOAL_NOT_VERIFIED", "Model completion did not satisfy the declared goal condition.", "INTERVENTION_REQUIRED");
             }
-            await this.evidence(trace);
             return { disposition: "SUCCESS", runId: request.runId, trace, outputs: {} };
           }
           for (const checkpoint of step.preconditions) {
@@ -69,7 +69,7 @@ export class DiscoveryEngine {
             }
           }
           const target = step.action.targetId ? await this.surface.resolve(artifact.targets.find((item) => item.id === step.action.targetId)!) : undefined;
-          const value = step.action.value?.kind === "input" ? request.inputs[step.action.value.input] : step.action.value?.value;
+          const value = resolveActionValue(step.action, request.inputs);
           let action: SurfaceAction;
           switch (step.action.type) {
             case "click": case "read": case "submit": action = { type: step.action.type, target: target! }; break;
@@ -85,7 +85,6 @@ export class DiscoveryEngine {
           trace.push({ kind: "ACTION", step: index, capabilityStep: step, result });
           if (!result.ok) {
             if (result.error?.recoverable && !result.error.ambiguousCommit && step.action.effect === "read") continue;
-            await this.evidence(trace);
             await intervene(result.error?.code ?? "ACTION_FAILED", index, false);
             return fail(result.error?.code ?? "ACTION_FAILED", "Discovery action could not safely complete.", "INTERVENTION_REQUIRED");
           }
@@ -93,6 +92,8 @@ export class DiscoveryEngine {
         await intervene("MAX_STEPS", request.maxSteps, false);
         return fail("MAX_STEPS", "Discovery reached its step limit.", "INTERVENTION_REQUIRED");
       });
+      await this.evidence(trace);
+      return result;
     } catch (error) {
       await this.evidence(trace);
       return fail(error instanceof ExecutionError ? error.code : "DISCOVERY_FAILED", "Discovery stopped; inspect the sanitized trace.");

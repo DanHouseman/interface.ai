@@ -38,7 +38,9 @@ The model proposes actions during discovery. The application checks those action
 
 ## Current status
 
-The latest fixes prevent sensitive values from appearing in failed-replay diagnostics, let a human take over during discovery, and make the saved evidence verifiable from a checkout.
+The execution core now separates replay validation and action construction, shares action-value and risk rules, and uses surface interfaces scoped to each consumer. The GUI receives state changes through server-sent events instead of polling once per second. Approval, recovery, redaction, and same-session handoff behavior remain covered by the regression suite.
+
+The demo accepts caller-supplied goal text for the supported application, captures richer evidence on terminal discovery stops, and classifies the application's permission-denial indicator explicitly. These changes preserve the existing member-lookup contract and allowlist.
 
 The [included evidence](./evidence/submission/README.md) covers a real OpenAI discovery run, replay, human takeover, and failure cases. Each run identifies whether it used a model, a scripted fixture, or an automated operator. Publishing the repository, checking remote CI, and submitting the link are still separate delivery steps.
 
@@ -46,7 +48,7 @@ The [included evidence](./evidence/submission/README.md) covers a real OpenAI di
 
 The demo runs from the terminal or the local GUI and works with a local member-lookup app in Chromium. Live discovery uses OpenAI; offline discovery follows a script so you can try the flow without an API key. You can replay a saved capability with another member ID or take over the browser when automation needs help.
 
-The demo comes with a predefined task and a known set of controls. Support for other applications and a graphical task-entry window would be future work. It cannot currently attach to an arbitrary browser or desktop window. The commands below generate the JSON artifacts for you; you do not need to edit them.
+The CLI and GUI accept natural-language goal text for the supported member-lookup task. The CLI target is the application ID `synthetic-member-desk`, which starts the local app on `--port`. The reviewed controls, permissions, output contract, and success checks remain fixed; goal text cannot authorize another workflow. Other applications remain unsupported. It cannot currently attach to an arbitrary browser or desktop window. The commands below generate the JSON artifacts for you; you do not need to edit them.
 
 ## What it does
 
@@ -194,7 +196,7 @@ Additional commands:
 
 Compiled JavaScript is written to `dist/`. Coverage enforces 100% statements, branches, functions, and lines for the configured source scope. Tests and offline demos do not make authenticated model calls.
 
-Current validation passes type checking, build, and 241 tests with 100% configured coverage. `npm run verify:evidence` verifies 81 hashed files, nine parsed artifacts, expected outcomes, and portable snapshot references without opening a browser or calling a model. See [P0 security validation](./P0_SECURITY_VALIDATION.md) for dates, commands, and limits.
+Validation on September 26, 2026 passed type checking, build, and 260 tests across 19 test files with 100% configured statement, branch, function, and line coverage. The configured coverage scope is TypeScript production modules; browser tests separately exercise `panel.js`, including the absence of state polling and reconnection after a server restart. `npm run verify:evidence` verifies 81 hashed files, nine parsed artifacts, expected outcomes, and portable snapshot references without opening a browser or calling a model. See the latest [implementation log](./ELOG.md) for this change and [P0 security validation](./P0_SECURITY_VALIDATION.md) for the earlier security checks and their limits.
 
 ## Run the GUI
 
@@ -209,6 +211,25 @@ The control panel can run offline scripted discovery, live OpenAI discovery afte
 ```bash
 GUI_PORT=4320 npm run gui
 ```
+
+The panel receives state changes over one server-sent event connection at
+`/api/events`. It does not poll `/api/state`; that endpoint remains available for
+on-demand snapshots and diagnostics. Commands still use token-protected POSTs.
+Native browser reconnects receive a full current snapshot, including the current
+session token. Disconnected controls are disabled, and page navigation or server
+shutdown closes the stream. Slow clients retain only the newest pending snapshot.
+
+The client replaces its state snapshot on each event. Form edits and selection
+state stay separate. Snapshots use ordinary JSON parsing without runtime deep
+freezing; authorization and request validation remain server responsibilities.
+
+The capability library refreshes when connecting, after a run finishes, or when
+you click **Refresh**. Use Refresh for artifacts added by another process. Elapsed
+time reflects the last state update; there is no client network polling timer.
+
+After updating a running checkout, restart `npm run gui` and reload the panel to
+load the new server and browser code. A healthy idle panel keeps one
+`/api/events` request open; reconnection opens a new request after interruption.
 
 ## Run the demo
 
@@ -237,10 +258,14 @@ Use an API model ID, not a display label. `gpt-4.1-mini` is the model verified i
 
 ```bash
 npm run demo -- discover --live \
+  --target synthetic-member-desk \
+  --goal "Find the supplied member and read their current savings balance" \
   --port 4173 \
   --member DEMO-001 \
   --evidence evidence/live-validation
 ```
+
+The supplied goal reaches the discovery model; it does not replace the reviewed member-lookup contract. The offline fixture accepts the same options but follows its script without interpreting the goal. Saved replay uses the artifact and rejects CLI `--goal`/`--target` overrides.
 
 Both `discover` and `--live` are required to make billable model calls. Discovery uses the Responses API with strict structured output. External policy checks each decision, and the host independently verifies completion. A successful discovery saves its artifact and discovery evidence before automatic deterministic replay.
 
@@ -248,6 +273,8 @@ Both `discover` and `--live` are required to make billable model calls. Discover
 
 | Option | Default / behavior |
 | --- | --- |
+| `--goal` | Discovery only (`discover` or `offline`); 1-2000 characters after trimming; defaults to the member savings-balance lookup goal |
+| `--target` | Discovery only; `synthetic-member-desk` is the only supported application ID; arbitrary URLs are rejected |
 | `--member` | `DEMO-001`; `DEMO-002` is another valid synthetic member |
 | `--port` | `4173`; saved artifacts remain bound to their original origin and port |
 | `--evidence` | `evidence/runs`; each execution gets a separate run directory |
@@ -273,7 +300,7 @@ npm run demo -- replay --headed --slow-mo 300 \
 
 For a new offline run, use the exact `evidence/runs/RUN_ID/artifact.json` path printed by that run. A deleted, mistyped, or example-only run ID is not a valid artifact path. Replay loads the saved artifact through `parseCapabilityArtifact` and makes zero model calls. It requires no API key. Invalid cross-references, undeclared inputs, and unsafe retry policies fail validation before execution.
 
-To exercise distinct runtime outcomes, repeat the replay command with `--member DEMO-999` for `BUSINESS_OUTCOME / MEMBER_NOT_FOUND`, or add `--scenario expired` with a valid member for `INTERVENTION_REQUIRED / SESSION_EXPIRED`.
+To exercise distinct runtime outcomes, repeat the replay command with `--member DEMO-999` for `BUSINESS_OUTCOME / MEMBER_NOT_FOUND`, add `--scenario denied` for `FAILURE / PERMISSION_DENIED`, or add `--scenario expired` with a valid member for `INTERVENTION_REQUIRED / SESSION_EXPIRED`. Permission denial is recognized from the configured application error indicator before another action; missing controls without that indicator remain target-resolution failures.
 
 ### Same-session human handoff
 
@@ -301,7 +328,7 @@ After verified handback, discovery reobserves the same page and continues withou
 
 The CLI prints the disposition, code, and evidence directory. Inspect the persisted result rather than relying only on the process exit status: expected business outcomes and intervention results can exit with status 0.
 
-Run bundles contain `manifest.json`, `replay.json`, the saved `artifact.json` when available, and structural snapshots. Discovery additionally records `discovery.json` and `discovery-manifest.json`, including sanitized provider provenance. Failed discovery may have no artifact or replay result.
+Run bundles contain `manifest.json`, `replay.json`, the saved `artifact.json` when available, and structural snapshots. Discovery additionally records `discovery.json` and `discovery-manifest.json`, including sanitized provider provenance. Failed discovery may have no artifact or replay result. Once the discovery loop starts, terminal results attempt a structural snapshot, including stuck, step-limit, failed-checkpoint, and policy-denial stops. Capture failures are recorded as `EVIDENCE_FAILURE` without replacing the original stop reason. Invalid requests and concurrent-run rejections do not capture the active session.
 
 | Completed validation | Included evidence |
 | --- | --- |
@@ -358,9 +385,11 @@ src/
   discovery/   Model-assisted discovery and capability compilation
   domain/      Shared execution contracts
   evidence/    Redaction and JSON evidence persistence
+  gui/         Local control panel and server-sent state updates
   hitl/        Human intervention and control transfer
   policy/      Runtime authority evaluation
   replay/      Deterministic execution and checkpoint evaluation
+  runtime/     Execution errors and bounded deadlines
   surface/     Surface abstraction, fake adapter, and Playwright adapter
 test/          Unit and end-to-end vertical-slice tests
 ELOG.md        Dated implementation progress and architectural decisions
@@ -372,6 +401,24 @@ notes.md       Engineering notebook and design rationale
 ## What I would build next
 
 Before using this in production, I would add persistent job and artifact storage, managed secrets, tenant isolation, an operator interface, and stronger browser/session management. The current project focuses on discovery, replay, policy checks, and human handoff for one application.
+
+## Execution boundaries
+
+Replay orchestration delegates invocation validation to `replay/validate-invocation.ts`
+and action construction to `replay/action-builder.ts`. The builder resolves targets
+and binds values without executing actions or deciding authority. Replay retains
+policy checks, trace ordering, recovery, and handoff decisions.
+
+`domain/action.ts` shares value binding and runtime risk classification across
+consumers. Discovery retains its own action validation: it rejects custom actions
+and reports discovery-specific errors. Artifact retry validation still evaluates
+declared effects; runtime policy additionally treats submit/custom as risky.
+
+Surface contracts are composed by responsibility. Replay and discovery consume
+`ExecutionSurface`, checkpoints consume `CheckpointSurface`, and human handoff
+consumes `HandoffSurface`. Existing adapters implement the compatible full
+`SurfaceAdapter` contract. These narrower dependencies allow consumers to use
+adapters without unrelated session-control or action-execution methods.
 
 ## Design rules
 

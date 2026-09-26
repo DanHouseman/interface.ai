@@ -97,6 +97,21 @@ describe("OpenAI provider contract without API calls", () => {
 describe("credit-safe CLI", () => {
   const io = () => ({ log: vi.fn(), ask: vi.fn(async () => "resume") });
   const executor = () => vi.fn(async (_options: DemoOptions) => ({ directory: "/tmp/evidence", result: { disposition: "SUCCESS" as const, code: "SUCCESS", message: "done", trace: [] }, artifact: artifact() }));
+  it("passes caller goal and supported target into discovery without expanding authority", async () => {
+    const execute = executor();
+    await main(["discover", "--live", "--goal", "  Read the supplied member's savings balance  ", "--target", "synthetic-member-desk"], { OPENAI_API_KEY: "test", MODEL_NAME: "model" }, execute, io());
+    expect(execute.mock.calls[0]![0]).toMatchObject({ goal: "Read the supplied member's savings balance", target: "synthetic-member-desk" });
+  });
+  it.each([
+    ["offline", "--goal", " "], ["offline", "--goal", "x".repeat(2001)],
+    ["offline", "--target", "https://outside.invalid/"],
+    ["replay", "--artifact", "example.json", "--goal", "Another task"],
+    ["handoff", "--artifact", "example.json", "--target", "synthetic-member-desk"],
+  ])("rejects unsupported discovery configuration before execution: %j", async (...args) => {
+    const execute = executor();
+    await expect(main(args, {}, execute, io())).rejects.toMatchObject({ code: "DEMO_CONFIGURATION" });
+    expect(execute).not.toHaveBeenCalled();
+  });
   it.each([new Error("raw error"), new ExecutionError("OTHER", "raw error"), new ExecutionError("DEMO_DISCOVERY_FAILED", "Sanitized failure: evidence/path")])("prints only the sanitized discovery failure envelope", async error => {
     const terminal = io(); const execute = executor().mockRejectedValue(error);
     await expect(main(["offline"], {}, execute, terminal)).rejects.toBe(error);

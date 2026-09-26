@@ -20,6 +20,18 @@ function malformedRequest(patch: Record<string, unknown>): DiscoveryRequest {
 
 // Milestone 5, 7, 11 | Assignment §3.1-3.4 | REQ-DISC-001..004
 describe("guarded discovery and compilation", () => {
+  it.each(["stuck", "budget", "completion", "precondition", "policy"])("captures richer terminal evidence for %s", async kind => {
+    const req = request(), s = discoverySurface();
+    let decision: DiscoveryDecision = { kind: "stuck", rationale: "Need help" };
+    if (kind === "budget") { req.maxSteps = 1; decision = act("wait", undefined, 0); }
+    if (kind === "completion") { decision = complete; req.specification.successCheckpoint.all = [{ kind: "text_visible", text: "absent" }]; }
+    if (kind === "precondition") { decision = act("click", "find"); s.setObservation({ visibleText: ["Waiting for operator"] }); }
+    if (kind === "policy") { decision = act("click", "find"); req.specification.policy.permittedActionTypes = ["read"]; }
+    const { result } = await discover([decision], req, s);
+    expect(result.disposition).not.toBe("SUCCESS");
+    expect(result.trace.filter(event => event.kind === "EVIDENCE")).toHaveLength(1);
+    expect(result.trace.at(-1)?.kind).toBe("EVIDENCE");
+  });
   it("compiles only successful executed actions, preserves contracts and input bindings", async () => {
     const req = request(), s = discoverySurface(); s.queueActionResult({ ok: false, error: { code: "SLOW", message: "slow", recoverable: true } });
     const { result } = await discover([act("wait", undefined, 0), act("type", "member"), complete], req, s);

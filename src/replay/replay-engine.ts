@@ -1,8 +1,11 @@
+import { isRiskyAction } from "../domain/action.js";
+import { buildReplayAction } from "./action-builder.js";
+import { validateInvocation } from "./validate-invocation.js";
 import { parseCapabilityArtifact } from "../artifact/load-capability.js";
 import type { CapabilityArtifact, CapabilityStep } from "../artifact/capability-schema.js";
 import type { ExecutionContext, JsonValue } from "../domain/contracts.js";
 import type { PolicyEvaluator } from "../policy/policy-evaluator.js";
-import type { ActionResult, SurfaceAction, SurfaceAdapter } from "../surface/surface-adapter.js";
+import type { ActionResult, SurfaceAction, ExecutionSurface } from "../surface/surface-adapter.js";
 import { ExecutionError, errorMessage } from "../runtime/errors.js";
 import { evaluateCheckpoint } from "./checkpoint-evaluator.js";
 import type { ReplayResult, ReplayTraceEvent } from "./replay-contracts.js";
@@ -18,7 +21,7 @@ export interface ReplayOptions {
 // One invocation owns this runner at a time. No model or provider is imported here.
 export class DeterministicReplayEngine {
   private running = false;
-  public constructor(private readonly surface: SurfaceAdapter, private readonly policy: PolicyEvaluator) {}
+  public constructor(private readonly surface: ExecutionSurface, private readonly policy: PolicyEvaluator) {}
 
   public async replay(candidate: CapabilityArtifact, invocation: ExecutionContext, options: ReplayOptions = {}): Promise<ReplayResult> {
     if (this.running) return result("FAILURE", "RUN_CONFLICT", "This runner already has an active invocation.", []);
@@ -83,7 +86,7 @@ export class DeterministicReplayEngine {
       if (await this.surface.getSessionState() === "expired") return await this.stop(trace, "INTERVENTION_REQUIRED", "SESSION_EXPIRED", "Session expired while resolving a target.", step.id);
       throw error;
     }
-    const risky = step.action.effect === "irreversible_write" || step.action.effect === "privileged" || action.type === "submit" || action.type === "custom";
+    const risky = isRiskyAction(step.action);
     if (risky) await this.evidence(trace, `risk:${step.id}:before`, step.id);
     let execution: ActionResult;
     let attempt = 0;
@@ -130,27 +133,10 @@ export class DeterministicReplayEngine {
     return undefined;
   }
 
-  private async buildAction(artifact: CapabilityArtifact, step: CapabilityStep, context: ExecutionContext, trace: ReplayTraceEvent[]): Promise<SurfaceAction> {
-    const value = step.action.value?.kind === "input" ? context.inputs[step.action.value.input] : step.action.value?.value;
-    let target;
-    if (step.action.targetId) {
-      const declared = artifact.targets.find((item) => item.id === step.action.targetId)!;
-      try { target = await this.surface.resolve(declared); }
-      catch (error) { throw new ExecutionError("TARGET_RESOLUTION_FAILED", errorMessage(error)); }
+  private buildAction(artifact: CapabilityArtifact, step: CapabilityStep, context: ExecutionContext, trace: ReplayTraceEvent[]): Promise<SurfaceAction> {
+    return buildReplayAction(artifact, step, context, this.surface, (target) => {
       trace.push({ kind: "TARGET_RESOLVED", stepId: step.id, targetId: target.targetId, strategyKind: target.strategy.kind, timestamp: now() });
-    }
-    switch (step.action.type) {
-      case "click": case "read": case "submit": return { type: step.action.type, target: target! };
-      case "type": case "select":
-        if (typeof value !== "string") throw new ExecutionError("STRING_VALUE_REQUIRED", "Action requires a string input value.");
-        return { type: step.action.type, target: target!, value };
-      case "navigate":
-        return { type: "navigate", value: value as string };
-      case "wait":
-        if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 30000) throw new ExecutionError("WAIT_DURATION_REQUIRED", "Wait requires a duration between 0 and 30000 ms.");
-        return { type: "wait", durationMs: value };
-      case "custom": return { type: "custom", name: step.action.customAction!, ...(target ? { target } : {}), ...(value !== undefined ? { value } : {}) };
-    }
+    });
   }
 
   private async extractOutputs(artifact: CapabilityArtifact, context: ExecutionContext, trace: ReplayTraceEvent[]): Promise<Record<string, JsonValue>> {
@@ -218,16 +204,3 @@ export class DeterministicReplayEngine {
 }
 function result(disposition: ReplayResult["disposition"], code: string, message: string, trace: ReplayTraceEvent[]): ReplayResult { return { disposition, code, message, trace }; }
 function now(): string { return new Date().toISOString(); }
-function validateInvocation(artifact: CapabilityArtifact, context: ExecutionContext): void {
-  if (context.capabilityId !== artifact.capability.id || context.capabilityVersion !== artifact.capability.version) throw new ExecutionError("CAPABILITY_MISMATCH", "Invocation identity/version does not match artifact.");
-  const declared = new Map(artifact.contract.inputs.map((input) => [input.name, input]));
-  for (const name of Object.keys(context.inputs)) {
-    if (!declared.has(name)) throw new ExecutionError("UNDECLARED_INPUT", `Undeclared input '${name}'.`);
-  }
-  for (const input of artifact.contract.inputs) {
-    const value = context.inputs[input.name];
-    if (value === undefined) {
-      if (input.required) throw new ExecutionError("MISSING_INPUT", `Required input '${input.name}' is missing.`);
-    } else if (typeof value !== input.type || (typeof value === "number" && !Number.isFinite(value))) throw new ExecutionError("INVALID_INPUT_TYPE", `Input '${input.name}' must be ${input.type}.`);
-  }
-}

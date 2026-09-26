@@ -1,3 +1,4 @@
+import { ExecutionError } from "../runtime/errors.js";
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve as resolvePath } from "node:path";
 import { randomUUID } from "node:crypto";
@@ -23,6 +24,7 @@ type BrowserHandle =
 export interface PlaywrightSurfaceAdapterOptions {
   readonly evidenceDirectory?: string;
   readonly timeoutMs?: number;
+  readonly permissionDeniedSelector?: string;
 }
 
 // Plan: Milestone 10 | REQ-SRF-001/002, REQ-RPL-002/004, REQ-EVD-002
@@ -39,6 +41,7 @@ export class PlaywrightSurfaceAdapter implements SurfaceAdapter {
   private activeAction: Promise<ActionResult> | undefined;
   private dialogSeen = false;
   private readonly timeoutMs: number;
+  private readonly permissionDeniedSelector: string | undefined;
 
   public constructor(
     private readonly page: Page,
@@ -46,6 +49,7 @@ export class PlaywrightSurfaceAdapter implements SurfaceAdapter {
   ) {
     this.evidenceDirectory = resolvePath(options.evidenceDirectory ?? "evidence/runtime/browser");
     this.timeoutMs = options.timeoutMs ?? 1000;
+    this.permissionDeniedSelector = options.permissionDeniedSelector;
     this.page.setDefaultTimeout(this.timeoutMs);
     this.page.on("dialog", async (dialog) => { this.dialogSeen = true; await dialog.dismiss(); });
   }
@@ -115,6 +119,7 @@ export class PlaywrightSurfaceAdapter implements SurfaceAdapter {
 
   // Ordered fallback is deterministic. No model participates in target resolution.
   public async resolve(target: Target): Promise<ResolvedTarget> {
+    await this.checkPermission();
     const failures: string[] = [];
 
     for (const strategy of target.strategies) {
@@ -126,6 +131,7 @@ export class PlaywrightSurfaceAdapter implements SurfaceAdapter {
       }
     }
 
+    await this.checkPermission();
     throw new Error(`Target '${target.id}' could not be resolved. ${failures.join(" | ")}`);
   }
 
@@ -150,6 +156,7 @@ export class PlaywrightSurfaceAdapter implements SurfaceAdapter {
 
     this.dialogSeen = false;
     try {
+      await this.checkPermission();
       switch (action.type) {
         case "click":
           await this.clickHandle(asBrowserHandle(action.target));
@@ -188,8 +195,15 @@ export class PlaywrightSurfaceAdapter implements SurfaceAdapter {
           return failure("CUSTOM_ACTION_UNSUPPORTED", `Browser adapter does not implement custom action '${action.name}'.`, false);
       }
     } catch (error) {
+      if (error instanceof ExecutionError) return failure(error.code, error.message, false);
       const ambiguous = ["click", "submit", "type", "select"].includes(action.type);
       return { ok: false, error: { code: "BROWSER_ACTION_FAILED", message: errorMessage(error), recoverable: !ambiguous, ambiguousCommit: ambiguous } };
+    }
+  }
+
+  private async checkPermission(): Promise<void> {
+    if (this.permissionDeniedSelector && await this.page.locator(this.permissionDeniedSelector).isVisible()) {
+      throw new ExecutionError("PERMISSION_DENIED", "Application denied permission.");
     }
   }
 

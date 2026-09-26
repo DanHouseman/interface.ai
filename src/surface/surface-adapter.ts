@@ -70,13 +70,35 @@ export interface EvidenceReference {
 // Plan: Milestone 4 | REQ-SRF-001, REQ-RPL-004
 // Core seam between recorded flow and concrete computer-use technology. Replay and discovery
 // depend on this interface, not on Playwright, accessibility APIs, or desktop automation directly.
-export interface SurfaceAdapter {
+export interface SurfaceObserver {
   observe(targets?: readonly Target[]): Promise<Observation>;
+}
+
+export interface TargetResolver {
   resolve(target: Target): Promise<ResolvedTarget>;
+}
+
+export interface ActionExecutor {
   execute(action: SurfaceAction): Promise<ActionResult>;
+}
+
+export interface EvidenceSource {
   captureEvidence(reason: string): Promise<EvidenceReference>;
+}
+
+export interface SessionStateReader {
   getSessionState(): Promise<SessionState>;
+}
+
+export interface SessionControl extends SessionStateReader {
   getSessionOwner(): Promise<SessionOwner>;
   pause(): Promise<void>;
   resume(): Promise<void>;
 }
+
+export interface CheckpointSurface extends SurfaceObserver, TargetResolver, ActionExecutor, SessionStateReader {}
+export interface ExecutionSurface extends CheckpointSurface, EvidenceSource {}
+export interface HandoffSurface extends SurfaceObserver, EvidenceSource, SessionControl {}
+
+// Existing adapters retain the full contract; consumers request only what they use.
+export interface SurfaceAdapter extends ExecutionSurface, SessionControl {}

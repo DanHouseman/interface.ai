@@ -3,7 +3,7 @@ import { chromium, type Page } from 'playwright';
 import { mkdtemp, cp, rm, readFile, mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createServer } from 'node:net';
+import { createServer, Server } from 'node:net';
 import { request } from 'node:http';
 import { startGui } from '../src/gui/server.js';
 import { runDemo, type DemoOptions } from '../src/demo/run-demo.js';
@@ -24,7 +24,7 @@ async function setup(execute?: typeof runDemo, environment:NodeJS.ProcessEnv = {
   const post = (path:string, body:unknown, headers:Record<string,string> = {}) => fetch(gui.url+'/api/'+path,{method:'POST',headers:{'Content-Type':'application/json','X-Gui-Token':token,...headers},body:JSON.stringify(body)});
   return { root, gui, state, post };
 }
-const input = { application:'synthetic-member-desk', goal:'member.lookup', mode:'offline',memberId:'DEMO-001',port:4173,scenario:'normal',headed:false,slowMoMs:0 };
+const input = { application:'synthetic-member-desk', goal:'Find the supplied member and read the savings balance', mode:'offline',memberId:'DEMO-001',port:4173,scenario:'normal',headed:false,slowMoMs:0 };
 const successResult: ReplayResult = { disposition:'SUCCESS', code:'SUCCESS', message:'Success', trace:[] };
 const completed = (directory:string) => ({ directory, result:successResult, artifact:{} as CapabilityArtifact });
 const interventionRequest: InterventionRequest = {
@@ -34,16 +34,82 @@ const interventionRequest: InterventionRequest = {
 };
 
 describe('local control panel', () => {
+  it('pushes state without polling, reconnects after restart, and closes streams on navigation', async () => {
+    let finish!: () => void;
+    let progress!: (phase: string) => void;
+    const execute: typeof runDemo = async options => {
+      progress = options.onProgress!;
+      await new Promise<void>(resolve => { finish = resolve; });
+      return completed(process.cwd());
+    };
+    const { gui, root, post } = await setup(execute);
+    const browser = await chromium.launch({ headless: true }); cleanups.push(() => browser.close());
+    const page = await browser.newPage();
+    const calls: string[] = [];
+    const errors: string[] = [];
+    page.on('request', request => calls.push(new URL(request.url()).pathname));
+    page.on('pageerror', error => errors.push(error.message));
+    // The browser must never use the snapshot endpoint, even after mutations.
+    await page.route('**/api/state', route => route.abort());
+    await page.clock.install();
+    await page.goto(gui.url);
+    await page.waitForFunction(() => document.querySelector('#connection')?.textContent?.includes('Connected'));
+    await page.clock.fastForward(10000);
+    expect(calls.filter(path => path === '/api/events')).toHaveLength(1);
+    expect(calls.filter(path => path === '/api/state')).toHaveLength(0);
+    await post('setup', { apiKey: 'sse-secret', model: 'push-model' });
+    await page.waitForFunction(() => document.querySelector('#setup-status')?.textContent?.includes('Live discovery configured'));
+    expect(await page.locator('#model').inputValue()).toBe('push-model');
+    const { runId } = await (await post('run', input)).json();
+    progress('Progress delivered by server push');
+    await page.waitForFunction(() => document.querySelector('#phase')?.textContent === 'Progress delivered by server push');
+    await page.locator('#cancel').click();
+    await page.waitForFunction(() => document.querySelector('#run-status')?.textContent === 'cancelling');
+    finish();
+    await page.waitForFunction(() => document.querySelector('#run-status')?.textContent === 'cancelled');
+    expect(runId).toBeTruthy();
+    expect(calls.filter(path => path === '/api/state')).toHaveLength(0);
+    await page.clock.resume();
+    await gui.close();
+    await page.waitForFunction(() => document.querySelector('#connection')?.textContent?.includes('Disconnected'));
+    await page.locator('#mode').selectOption('replay');
+    expect(await page.locator('#start').isDisabled()).toBe(true);
+    expect(await page.locator('#resume').isDisabled()).toBe(true);
+    expect(await page.locator('#cancel').isDisabled()).toBe(true);
+    const restarted = await startGui({ root, port: Number(new URL(gui.url).port), execute, environment: {} });
+    cleanups.push(restarted.close);
+    await page.waitForFunction(() => document.querySelector('#connection')?.textContent?.includes('Connected'));
+    expect(await page.locator('#history').textContent()).toContain('Your runs will appear here');
+    expect(await page.locator('#run-status').textContent()).toBe('Idle');
+    // Commands use the new launcher's token after automatic reconnection.
+    await page.locator('#setup-status').locator('..').locator('summary').click();
+    await page.locator('#model').fill('restarted-model');
+    await page.locator('#setup button').click();
+    await page.waitForFunction(() => document.querySelector('#setup-saved')?.textContent?.includes('Saved'));
+    expect(await page.locator('#error').isVisible()).toBe(false);
+    // Manual refresh loads artifacts added outside this launcher, using a fresh stream.
+    await mkdir(join(root, 'evidence/imported'), { recursive: true });
+    await cp('evidence/submission/genuine-discovery/artifact.json', join(root, 'evidence/imported/artifact.json'));
+    await page.locator('#refresh').click();
+    await page.waitForFunction(() => document.querySelectorAll('#artifact option').length === 1);
+    expect(calls.filter(path => path === '/api/state')).toHaveLength(0);
+    expect(errors).toEqual([]);
+    await page.goto('about:blank');
+    await restarted.close();
+  }, 30000);
+
   it('rejects unsupported targets, unsafe requests, missing artifacts and unconsented live calls before execution', async () => {
     const execute = vi.fn<typeof runDemo>(); const {gui,post,state} = await setup(execute);
     expect((await fetch(gui.url+'/')).headers.get('content-security-policy')).toContain("frame-ancestors 'none'");
     for (const path of ['/panel.js','/panel.css']) expect((await fetch(gui.url+path)).status).toBe(200);
     expect((await fetch(gui.url+'/missing')).status).toBe(404);
     expect((await fetch(gui.url+'/api/state',{headers:{Origin:'https://evil.invalid'}})).status).toBe(403);
+    expect((await fetch(gui.url+'/api/events',{headers:{Origin:'https://evil.invalid'}})).status).toBe(403);
+    expect((await fetch(gui.url+'/api/events',{headers:{'Sec-Fetch-Site':'cross-site'}})).status).toBe(403);
     expect(await new Promise<number | undefined>(resolve => { const req=request(gui.url+'/api/state',{headers:{Host:'evil.invalid'}},res=>{res.resume();resolve(res.statusCode);});req.end(); })).toBe(403);
     expect((await post('run',input,{'X-Gui-Token':'wrong'})).status).toBe(403);
     expect((await post('run',{...input,application:'https://example.com'})).status).toBe(400);
-    expect(await (await post('run',{...input,goal:'other'})).json()).toMatchObject({error:'UNSUPPORTED_TARGET_OR_GOAL'});
+    expect(await (await post('run',{...input,goal:'   '})).json()).toMatchObject({error:'INVALID_REQUEST'});
     expect((await post('run',{...input,memberId:'secret'})).status).toBe(400);
     expect((await post('run',{...input,mode:'replay',artifactId:'../../etc/passwd'})).status).toBe(400);
     expect((await post('run',{...input,mode:'discover'})).status).toBe(400);
@@ -74,6 +140,7 @@ describe('local control panel', () => {
     await page.locator('#application').selectOption('synthetic-member-desk');
     await page.locator('#run-form details summary').click();
     await page.locator('#port').fill(String(await freePort())); await page.locator('#slow').fill('0'); await page.locator('#headed').uncheck();
+    await page.locator('#goal').fill('Look up the supplied member and return the savings balance');
     await page.locator('#start').click();
     await expect.poll(async () => (await state()).runs[0]?.status,{timeout:20000}).toBe('completed');
     await expect.poll(async () => (await state()).capabilities.length).toBe(1);
@@ -83,6 +150,8 @@ describe('local control panel', () => {
     await expect.poll(async () => (await state()).runs[0]?.status,{timeout:20000}).toBe('completed');
     const replay = (await state()).runs[0]; expect(replay.disposition).toBe('SUCCESS');
     const manifest = JSON.parse(await readFile(join(root,replay.directory,'manifest.json'),'utf8')); expect(manifest.modelCallsDuringReplay).toBe(0);
+    expect(configurations[0]!.goal).toBe('Look up the supplied member and return the savings balance');
+    expect(configurations[0]!.target).toBe('synthetic-member-desk');
     expect(configurations[1]!.model).toBeUndefined(); expect(configurations[1]!.memberId).toBe('DEMO-002');
     await page.locator('#mode').selectOption('handoff'); await expect.poll(() => page.locator('#start').isEnabled()).toBe(true); await page.locator('#start').click();
     await expect.poll(async () => (await state()).runs[0]?.status,{timeout:20000}).toBe('paused');
@@ -194,9 +263,16 @@ describe('local control panel', () => {
     const cwdGui = await startGui({ port:0, execute:async () => completed(process.cwd()) });
     cleanups.push(cwdGui.close);
     expect((await fetch(cwdGui.url+'/api/state')).status).toBe(200);
+    // Verify the default argument without competing with an actual running GUI.
+    const originalListen = Server.prototype.listen;
+    const listen = vi.spyOn(Server.prototype, 'listen').mockImplementation(function(this: Server, ...args: unknown[]) {
+      if (args[0] === 4310) args[0] = 0;
+      return Reflect.apply(originalListen, this, args) as Server;
+    } as typeof originalListen);
     const defaultPortGui = await startGui({ root:process.cwd(), execute:async () => completed(process.cwd()), environment:{} });
     cleanups.push(defaultPortGui.close);
-    expect(defaultPortGui.url).toBe('http://127.0.0.1:4310');
+    expect(listen).toHaveBeenCalledWith(4310, '127.0.0.1', expect.any(Function));
+    expect((await fetch(defaultPortGui.url+'/api/state')).status).toBe(200);
   });
 
   it('starts, stops and validates the launcher entrypoint', async () => {

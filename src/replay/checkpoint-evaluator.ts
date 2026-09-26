@@ -1,6 +1,6 @@
 import type { CapabilityArtifact } from "../artifact/capability-schema.js";
 import type { JsonValue } from "../domain/contracts.js";
-import type { SurfaceAdapter } from "../surface/surface-adapter.js";
+import type { CheckpointSurface } from "../surface/surface-adapter.js";
 import { EvidenceRedactor } from "../evidence/redactor.js";
 import { errorMessage } from "../runtime/errors.js";
 
@@ -12,7 +12,7 @@ export interface CheckpointEvaluation { readonly passed: boolean; readonly expec
 export async function evaluateCheckpoint(
   artifact: CapabilityArtifact,
   checkpoint: CapabilityArtifact["successCheckpoint"],
-  surface: SurfaceAdapter,
+  surface: CheckpointSurface,
   inputs: Readonly<Record<string, JsonValue>> = {},
 ): Promise<CheckpointEvaluation> {
   const deadline = Date.now() + (checkpoint.timeoutMs ?? 0);
@@ -23,7 +23,7 @@ export async function evaluateCheckpoint(
   }
 }
 
-async function sample(artifact: CapabilityArtifact, checkpoint: CapabilityArtifact["successCheckpoint"], surface: SurfaceAdapter, inputs: Readonly<Record<string, JsonValue>>): Promise<CheckpointEvaluation> {
+async function sample(artifact: CapabilityArtifact, checkpoint: CapabilityArtifact["successCheckpoint"], surface: CheckpointSurface, inputs: Readonly<Record<string, JsonValue>>): Promise<CheckpointEvaluation> {
   // Register sensitive live values before projecting observations into trace strings.
   // Extraction can fail later, so result.outputs must not be the privacy dependency.
   const sensitiveTargets = new Set(artifact.contract.outputs.filter(field => field.sensitive).map(field => field.source.targetId));

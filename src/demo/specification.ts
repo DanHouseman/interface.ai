@@ -1,5 +1,19 @@
+import { ExecutionError } from "../runtime/errors.js";
 import type { DiscoverySpecification } from "../discovery/discovery-contracts.js";
 import type { Target } from "../artifact/capability-schema.js";
+
+export const defaultDemoGoal = "Find the supplied member and read their current savings balance from the member detail screen.";
+export const demoTarget = "synthetic-member-desk";
+export const demoPermissionDeniedSelector = '#result:text-is("Permission denied")';
+
+// The demo accepts goal text for one reviewed application, not arbitrary URLs.
+export function demoRequest(input: { readonly goal?: string; readonly target?: string }) {
+  const goal = (input.goal ?? defaultDemoGoal).trim();
+  const target = input.target ?? demoTarget;
+  if (!goal || goal.length > 2000) throw new ExecutionError("DEMO_CONFIGURATION", "Goal must contain between 1 and 2000 characters.");
+  if (target !== demoTarget) throw new ExecutionError("DEMO_CONFIGURATION", "Only the synthetic-member-desk target is supported.");
+  return { goal, target };
+}
 
 // Milestone 3 + 11 | Assignment §3.2, §3.7 | REQ-ART-001, REQ-MT-001
 // The host provides a small reviewed control catalog and contract, not the flow order.

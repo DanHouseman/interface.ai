@@ -73,6 +73,19 @@ describe("PlaywrightSurfaceAdapter", () => {
     expect(await surface.getSessionState()).toBe("active");
   });
 
+  it("classifies configured permission denial before resolving or executing controls", async () => {
+    await page.setContent('<p>Permission denied</p><div id="result"></div><button id="action" onclick="this.textContent=\'executed\'">Act</button>');
+    const guarded = new PlaywrightSurfaceAdapter(page, { permissionDeniedSelector: '#result:text-is("Permission denied")' });
+    const target: Target = { id: "action", description: "Action", strategies: [{ kind: "selector", selector: "#action" }], requireUniqueMatch: true };
+    const resolved = await guarded.resolve(target);
+    // Unrelated prose does not trigger the configured application error indicator.
+    expect(resolved.targetId).toBe("action");
+    await page.locator('#result').evaluate(element => { element.textContent = 'Permission denied'; });
+    await expect(guarded.resolve(target)).rejects.toMatchObject({ code: "PERMISSION_DENIED" });
+    expect(await guarded.execute({ type: "click", target: resolved })).toMatchObject({ ok: false, error: { code: "PERMISSION_DENIED", recoverable: false } });
+    expect(await page.locator('#action').textContent()).toBe('Act');
+  });
+
   it("supports selector, attribute, structural, visual, select, read, wait, submit, and navigation mechanics", async () => {
     await page.setContent(`
       <form id="form" onsubmit="event.preventDefault(); document.querySelector('#submitted').textContent='submitted'">

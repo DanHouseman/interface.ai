@@ -13,13 +13,19 @@ import { startDemoApp } from "../src/demo/target-app.js";
 describe("offline full-system acceptance", () => {
   it("discovers once, replays changed inputs without model calls and records not-found/validation failures", async () => {
     const directory = await mkdtemp(join(tmpdir(), "demo-system-")); const model = new ScriptedDemoModel(); const decide = vi.spyOn(model, "decide");
-    const discovered = await runDemo({ directory, memberId: "DEMO-001", port: 0, scenario: "normal", live: false, model });
+    const goal = "Look up the supplied member and report their savings balance";
+    const discovered = await runDemo({ goal, target: "synthetic-member-desk", directory, memberId: "DEMO-001", port: 0, scenario: "normal", live: false, model });
+    expect(decide.mock.calls[0]![0]!.goal).toBe(goal);
     expect(discovered.result).toMatchObject({ disposition: "SUCCESS", outputs: { balance: "$123.45" } });
     const port = Number(new URL(discovered.artifact.policy.permittedTargets[0]!).port); const artifactPath = join(discovered.directory, "artifact.json");
     const calls = decide.mock.calls.length;
-    for (const [memberId, scenario, code] of [["DEMO-002", "slow", "SUCCESS"], ["DEMO-999", "normal", "MEMBER_NOT_FOUND"], ["bad", "normal", "INVALID_MEMBER_ID"], ["DEMO-001", "denied", "TARGET_RESOLUTION_FAILED"], ["DEMO-001", "expired", "SESSION_EXPIRED"]]) {
+    for (const [memberId, scenario, code] of [["DEMO-002", "slow", "SUCCESS"], ["DEMO-999", "normal", "MEMBER_NOT_FOUND"], ["bad", "normal", "INVALID_MEMBER_ID"], ["DEMO-001", "denied", "PERMISSION_DENIED"], ["DEMO-001", "expired", "SESSION_EXPIRED"]]) {
       const replay = await runDemo({ directory, memberId: memberId!, port, scenario: scenario!, live: false, artifactPath });
       expect(replay.result.code).toBe(code);
+      if (code === "PERMISSION_DENIED") {
+        expect(replay.result.disposition).toBe("FAILURE");
+        expect(replay.result.trace.filter(event => event.kind === "ACTION_RESULT")).toHaveLength(2);
+      }
       if (code === "SUCCESS") expect(replay.result.outputs).toEqual({ balance: "$678.90" });
       const persisted = await readFile(join(replay.directory, "replay.json"), "utf8");
       expect(persisted).not.toContain(memberId); expect(persisted).not.toContain("$678.90");
@@ -49,7 +55,15 @@ describe("offline full-system acceptance", () => {
     const directory = await mkdtemp(join(tmpdir(), "demo-failure-"));
     await expect(runDemo({ directory, memberId: "DEMO-001", port: 0, scenario: "normal", live: true, model: { async decide() { return { kind: "stuck", rationale: "Cannot proceed" }; }, metadata() { return { provider: "mock" }; } } })).rejects.toThrow("DISCOVERY_STUCK");
     await expect(runDemo({ directory, memberId: "DEMO-001", port: 0, scenario: "normal", live: false, model: { async decide() { return { kind: "stuck", rationale: "Offline failure" }; } } })).rejects.toThrow("DISCOVERY_STUCK");
-    const [id] = await readdir(directory); expect(await readFile(join(directory, id!, "discovery.json"), "utf8")).toContain("DISCOVERY_STUCK");
+    for (const id of await readdir(directory)) {
+      const stopped = JSON.parse(await readFile(join(directory, id, "discovery.json"), "utf8"));
+      expect(stopped.code).toBe("DISCOVERY_STUCK");
+      const captured = stopped.trace.filter((event: { kind: string }) => event.kind === "EVIDENCE");
+      expect(captured).toHaveLength(1);
+      const snapshot = JSON.parse(await readFile(captured[0].evidence.path, "utf8"));
+      expect(snapshot.structure.length).toBeGreaterThan(0);
+      expect(JSON.stringify(snapshot)).not.toContain("DEMO-001");
+    }
     await expect(runDemo({ directory, memberId: "DEMO-001", port: 0, scenario: "normal", live: false })).rejects.toThrow("DISCOVERY_MODEL_REQUIRED");
   }, 15000);
   it("rejects replay against a different origin and serves only the demo route", async () => {

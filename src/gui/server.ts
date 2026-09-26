@@ -10,9 +10,10 @@ import { ScriptedDemoModel } from '../demo/scripted-model.js';
 import { OpenAIDiscoveryModel } from '../discovery/openai-discovery-model.js';
 import { parseCapabilityArtifact } from '../artifact/load-capability.js';
 import { ExecutionError } from '../runtime/errors.js';
+import { StateStream } from './state-stream.js';
 
 const invocation = z.object({
-  application: z.literal('synthetic-member-desk'), goal: z.literal('member.lookup'),
+  application: z.literal('synthetic-member-desk'), goal: z.string().trim().min(1).max(2000),
   mode: z.enum(['offline', 'discover', 'replay', 'handoff']),
   memberId: z.string().regex(/^DEMO-\d{3}$/),
   port: z.number().int().min(1024).max(65535),
@@ -31,6 +32,20 @@ export async function startGui(options: { port?: number; root?: string; execute?
   const token = randomUUID();
   const runs: Run[] = [];
   let active: Active | undefined;
+  const stream = new StateStream();
+  let library = new Map<string, Entry>();
+  let browserInstalled = false;
+  const snapshot = () => ({ token, setup: { browserInstalled, credentialsConfigured: Boolean(key && modelName), modelName, node: process.version }, capabilities: [...library.values()].map(({ path: _path, ...entry }) => entry), runs });
+  const publish = () => stream.publish(snapshot());
+  // Serialize explicit refreshes so an older scan cannot overwrite a newer one.
+  let refreshPending = Promise.resolve();
+  function refreshLibrary(): Promise<void> {
+    refreshPending = refreshPending.then(async () => {
+      library = await scan(join(root, 'evidence'));
+      browserInstalled = await access(chromium.executablePath()).then(() => true, () => false);
+    });
+    return refreshPending;
+  }
   async function scan(directory: string, depth = 0, library = new Map<string, Entry>()): Promise<Map<string, Entry>> {
     if (depth > 4) return library;
     for (const entry of await readdir(directory, { withFileTypes: true }).catch(() => [])) {
@@ -48,7 +63,7 @@ export async function startGui(options: { port?: number; root?: string; execute?
     }
     return library;
   }
-  const event = (run: Run, message: string) => { run.phase = message; run.events.push({ time: new Date().toISOString(), message }); };
+  const event = (run: Run, message: string) => { run.phase = message; run.events.push({ time: new Date().toISOString(), message }); publish(); };
   async function body(req: IncomingMessage) {
     let text = '';
     for await (const part of req) { text += part; if (Buffer.byteLength(text) > 16384) throw new Error('REQUEST_TOO_LARGE'); }
@@ -68,10 +83,11 @@ export async function startGui(options: { port?: number; root?: string; execute?
         const content = await readFile(join(root, 'src/gui', file));
         res.writeHead(200, { 'Content-Type': file.endsWith('.html') ? 'text/html; charset=utf-8' : file.endsWith('.js') ? 'text/javascript' : 'text/css', 'Cache-Control': 'no-store' }); res.end(content); return;
       }
-      if (req.method === 'GET' && path === '/api/state') {
-        const library = await scan(join(root, 'evidence'));
-        const browserInstalled = await access(chromium.executablePath()).then(() => true, () => false);
-        json(200, { token, setup: { browserInstalled, credentialsConfigured: Boolean(key && modelName), modelName, node: process.version }, capabilities: [...library.values()].map(({ path: _path, ...entry }) => entry), runs }); return;
+      if (req.method === 'GET' && (path === '/api/state' || path === '/api/events')) {
+        await refreshLibrary();
+        if (path === '/api/events') stream.subscribe(res, snapshot());
+        else json(200, snapshot());
+        return;
       }
       if (req.method !== 'POST') { json(404, { error: 'NOT_FOUND' }); return; }
       if (req.headers['x-gui-token'] !== token || req.headers['content-type'] !== 'application/json') { json(403, { error: 'SESSION_TOKEN_REQUIRED' }); return; }
@@ -80,7 +96,7 @@ export async function startGui(options: { port?: number; root?: string; execute?
         if (active) { json(409, { error: 'RUN_ACTIVE' }); return; }
         const parsed = z.object({ apiKey: z.string().max(512), model: z.string().trim().min(1).max(128) }).strict().parse(input);
         if (parsed.apiKey) key = parsed.apiKey;
-        modelName = parsed.model; json(200, { ok: true }); return;
+        modelName = parsed.model; publish(); json(200, { ok: true }); return;
       }
       if (path === '/api/control') {
         const control = z.object({ runId: z.string(), action: z.enum(['resume', 'cancel']), handoffId: z.string().optional() }).strict().parse(input);
@@ -90,10 +106,10 @@ export async function startGui(options: { port?: number; root?: string; execute?
           if (!active.settle || active.run.handoff?.id !== control.handoffId) { json(409, { error: 'HANDOFF_NOT_PENDING' }); return; }
           active.settle(true);
         }
-        json(200, { ok: true }); return;
+        publish(); json(200, { ok: true }); return;
       }
       if (path !== '/api/run') { json(404, { error: 'NOT_FOUND' }); return; }
-      if (input.application !== 'synthetic-member-desk' || input.goal !== 'member.lookup') { json(400, { error: 'UNSUPPORTED_TARGET_OR_GOAL', message: 'Only Synthetic Member Desk and member lookup are supported. Arbitrary URLs and desktop applications cannot be attached.' }); return; }
+      if (input.application !== 'synthetic-member-desk') { json(400, { error: 'UNSUPPORTED_TARGET_OR_GOAL', message: 'Only Synthetic Member Desk is supported. Goals use the member-lookup contract; arbitrary URLs and desktop applications cannot be attached.' }); return; }
       const parsed = invocation.parse(input);
       if (active) { json(409, { error: 'RUN_ACTIVE' }); return; }
       const saved = parsed.mode === 'replay' || parsed.mode === 'handoff';
@@ -106,6 +122,7 @@ export async function startGui(options: { port?: number; root?: string; execute?
       const current: Active = { run, abort: new AbortController() };
       active = current; runs.unshift(run); if (runs.length > 100) runs.pop();
       const config: DemoOptions = {
+        goal: parsed.goal, target: parsed.application,
         directory: join(root, 'evidence/gui'), memberId: parsed.memberId, port: saved ? entry!.port : parsed.port,
         scenario: parsed.mode === 'handoff' ? 'handoff' : parsed.scenario, live: parsed.mode === 'discover',
         headless: !parsed.headed, slowMoMs: parsed.slowMoMs, signal: current.abort.signal,
@@ -131,7 +148,7 @@ export async function startGui(options: { port?: number; root?: string; execute?
       // There is deliberately no model construction or model dependency on saved replay.
       if (!saved) {
         const model: DiscoveryModel = parsed.mode === 'discover' ? new OpenAIDiscoveryModel(key, modelName) : new ScriptedDemoModel();
-        Object.assign(config, { model: { decide: async (...args: Parameters<typeof model.decide>) => { if (parsed.mode === 'discover') run.modelCalls++; return model.decide(...args); }, metadata: () => model.metadata?.() ?? {} } });
+        Object.assign(config, { model: { decide: async (...args: Parameters<typeof model.decide>) => { if (parsed.mode === 'discover') { run.modelCalls++; publish(); } return model.decide(...args); }, metadata: () => model.metadata?.() ?? {} } });
       }
       event(run, saved ? 'Saved capability selected; model disabled' : parsed.mode === 'discover' ? 'Live discovery authorized' : 'Offline scripted discovery; no model API calls');
       json(202, { runId: run.id });
@@ -142,9 +159,13 @@ export async function startGui(options: { port?: number; root?: string; execute?
         run.status = current.abort.signal.aborted ? 'cancelled' : 'failed';
         run.code = error instanceof ExecutionError ? error.code : 'RUN_FAILED';
         event(run, run.status === 'cancelled' ? 'Cancelled; browser session closed' : `${run.code}: Check setup, application port and saved evidence.`);
-      }).finally(() => { run.ended = new Date().toISOString(); delete run.handoff; active = undefined; });
+      }).finally(async () => {
+        run.ended = new Date().toISOString(); delete run.handoff; active = undefined;
+        publish();
+        await refreshLibrary(); publish();
+      });
     } catch { json(400, { error: 'INVALID_REQUEST', message: 'Check the fields and try again.' }); }
   });
   await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(options.port ?? 4310, '127.0.0.1', () => { server.off('error', reject); resolve(); }); });
-  return { url: `http://127.0.0.1:${(server.address() as { port: number }).port}`, close: async () => { active?.abort.abort(); active?.settle?.(false); await new Promise<void>(resolve => server.close(() => resolve())); } };
+  return { url: `http://127.0.0.1:${(server.address() as { port: number }).port}`, close: async () => { stream.close(); active?.abort.abort(); active?.settle?.(false); await new Promise<void>(resolve => server.close(() => resolve())); } };
 }
