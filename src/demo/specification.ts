@@ -18,11 +18,11 @@ export function demoRequest(input: { readonly goal?: string; readonly target?: s
 // Milestone 3 + 11 | Assignment §3.2, §3.7 | REQ-ART-001, REQ-MT-001
 // The host provides a small reviewed control catalog and contract, not the flow order.
 // Only the local origin varies per run; the serialized artifact retains that authority.
-export function demoSpecification(url: string): DiscoverySpecification {
+export function demoSpecification(url: string, variant: "standard" | "legacy" = "standard"): DiscoverySpecification {
   const target = (id: string, selector: string, description: string): Target => ({ id, description, strategies: [{ kind: "selector", selector }], requireUniqueMatch: true });
   return {
     schemaVersion: "1.0", capability: { id: "member.lookup", name: "Member lookup", version: "1.0.0", description: "Find a synthetic member and read their savings balance." },
-    application: { family: "synthetic-member-desk", productVersion: "1", surface: "browser", compatibilityTags: ["local-demo"] },
+    application: { family: "synthetic-member-desk", productVersion: "1", surface: "browser", compatibilityTags: variant === "legacy" ? ["local-demo", "legacy-table"] : ["local-demo"] },
     contract: {
       inputs: [{ name: "memberId", type: "string", required: true, sensitive: true, description: "Member identifier." }],
       outputs: [{ name: "balance", type: "string", required: true, sensitive: true, description: "Displayed savings balance.", source: { targetId: "balance" } }],
@@ -32,7 +32,10 @@ export function demoSpecification(url: string): DiscoverySpecification {
       ],
     },
     policy: { permittedTargets: [new URL(url).origin], permittedRoutes: ["/"], permittedActionTypes: ["type", "click", "read", "wait"] },
-    targets: [target("member", "#member", "Member ID field"), target("find", "#find", "Find member button"), target("open", "#open", "Open member button"), target("selected", "#selected", "Selected member ID"), target("balance", "#balance", "Savings balance")],
+    targets: variant === "legacy" ? [
+      structural("member", "Member ID", "input"), structural("find", "Find member", "span"),
+      structural("open", "Member result", "span"), structural("selected", "Selected member", "span"), structural("balance", "Savings balance", "span"),
+    ] : [target("member", "#member", "Member ID"), target("find", "#find", "Find member"), target("open", "#open", "Open member"), target("selected", "#selected", "Selected member ID"), target("balance", "#balance", "Savings balance")],
     grants: {
       member: { actionTypes: ["type"], effect: "reversible_write" },
       find: { actionTypes: ["click"], effect: "read", preconditions: [{ id: "operator-ready", description: "Operator released this session", all: [{ kind: "text_visible", text: "Ready" }] }] },
@@ -43,4 +46,8 @@ export function demoSpecification(url: string): DiscoverySpecification {
     inputBindings: { member: "memberId" },
     successCheckpoint: { id: "member-detail", description: "Correct member and savings balance displayed", timeoutMs: 1000, all: [{ kind: "text_visible", text: "Member detail" }, { kind: "target_present", targetId: "balance" }, { kind: "target_value_equals_input", targetId: "selected", input: "memberId" }] },
   };
+}
+
+function structural(id: string, anchorText: string, controlHint: string): Target {
+  return { id, description: anchorText, requireUniqueMatch: true, strategies: [{ kind: "structural", anchorText, relation: "ancestor", controlHint }] };
 }

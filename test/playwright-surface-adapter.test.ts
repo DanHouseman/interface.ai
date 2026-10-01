@@ -141,7 +141,7 @@ describe("PlaywrightSurfaceAdapter", () => {
     await closedPage.close();
     expect(await closedSurface.getSessionState()).toBe("expired");
     expect((await closedSurface.observe()).signals.session).toBe("expired");
-    await closedSurface.pause();
+    await expect(closedSurface.pause()).rejects.toMatchObject({ code: "SESSION_CLOSED" });
     expect(await closedSurface.getSessionOwner()).toBe("none");
     await expect(closedSurface.resume()).rejects.toThrow("closed browser session");
     await expect(closedSurface.captureEvidence("closed")).rejects.toThrow("page has closed");

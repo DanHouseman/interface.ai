@@ -1,0 +1,10 @@
+{
+  "runId": "a64e220a-c0d9-47cf-a231-e306d5497943",
+  "startedAt": "2026-10-01T00:57:17.065Z",
+  "completedAt": "2026-10-01T00:57:18.029Z",
+  "discoveryMode": "offline-scripted-fixture",
+  "modelCallsDuringReplay": 0,
+  "target": "http://127.0.0.1:4173/",
+  "scenario": "normal",
+  "provider": null
+}

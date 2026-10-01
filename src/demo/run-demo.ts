@@ -21,6 +21,7 @@ import { startDemoApp } from "./target-app.js";
 export interface DemoOptions {
   readonly goal?: string;
   readonly target?: string;
+  readonly variant?: "standard" | "legacy";
   readonly onProgress?: (phase: string) => void;
   readonly signal?: AbortSignal;
   readonly directory: string;
@@ -52,7 +53,8 @@ export async function runDemo(options: DemoOptions) {
     catch { throw new ExecutionError("ARTIFACT_INVALID", "The saved file is not a valid capability artifact. Use artifact.json from a successful discovery run."); }
   }
   let app: Awaited<ReturnType<typeof startDemoApp>>;
-  try { app = await startDemoApp(options.port); }
+  const variant = savedArtifact ? savedArtifact.application.compatibilityTags.includes("legacy-table") ? "legacy" : "standard" : options.variant ?? "standard";
+  try { app = await startDemoApp(options.port, variant); }
   catch { throw new ExecutionError("DEMO_SERVER_UNAVAILABLE", "Cannot start the local demo server. Check that the requested port is available."); }
   try {
     let browser: Awaited<ReturnType<typeof chromium.launch>>;
@@ -74,8 +76,8 @@ export async function runDemo(options: DemoOptions) {
         if (!options.model) throw new Error("DISCOVERY_MODEL_REQUIRED");
         const context = await browser.newContext({ serviceWorkers: "block" });
         const page = await context.newPage();
-        const surface = new PlaywrightSurfaceAdapter(page, { permissionDeniedSelector: demoPermissionDeniedSelector, evidenceDirectory: join(directory, "discovery") });
-        const specification = demoSpecification(app.url);
+        const surface = new PlaywrightSurfaceAdapter(page, { permissionDeniedSelector: variant === "legacy" ? 'p:text-is("Permission denied")' : demoPermissionDeniedSelector, evidenceDirectory: join(directory, "discovery") });
+        const specification = demoSpecification(app.url, variant);
         await surface.guard(specification.policy);
         await page.goto(options.scenario === "discovery-handoff" ? `${app.url}?scenario=handoff` : app.url);
         const discoveryActions = await recordHumanActions(page, surface, "local-operator");
@@ -112,7 +114,7 @@ export async function runDemo(options: DemoOptions) {
       options.onProgress?.("Replaying saved steps (zero model calls)");
       const context = await browser.newContext({ serviceWorkers: "block" });
       const page = await context.newPage();
-      const surface = new PlaywrightSurfaceAdapter(page, { permissionDeniedSelector: demoPermissionDeniedSelector, evidenceDirectory: join(directory, "replay") });
+      const surface = new PlaywrightSurfaceAdapter(page, { permissionDeniedSelector: variant === "legacy" ? 'p:text-is("Permission denied")' : demoPermissionDeniedSelector, evidenceDirectory: join(directory, "replay") });
       await surface.guard(artifact.policy);
       await page.goto(`${app.url}?scenario=${encodeURIComponent(options.scenario)}`);
       const actions = await recordHumanActions(page, surface, "local-operator");

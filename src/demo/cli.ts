@@ -17,6 +17,8 @@ const usage = `Usage:
 
 Discovery accepts --goal "Look up the supplied member and read their savings balance"
 and --target synthetic-member-desk. Only the local member-lookup application is supported.
+Use --variant legacy for the table-based surface with no IDs or semantic controls.
+Saved replay selects the variant recorded in the artifact.
 All modes accept --port 4173 --member DEMO-001 --evidence DIRECTORY.
 Offline/discover/replay are headless by default; --headed shows Chromium.
 Handoff and --operator always open a visible browser. Leave it open for handback.
@@ -37,7 +39,7 @@ async function runCli(args: string[], environment: NodeJS.ProcessEnv, execute: t
   if (args.length === 0 || args.includes("--help")) { io.log(usage); return; }
   const { values, positionals } = parseArgs({ args, allowPositionals: true, options: {
     headed: { type: "boolean", default: false }, "slow-mo": { type: "string", default: "0" },
-    goal: { type: "string" }, target: { type: "string" },
+    goal: { type: "string" }, target: { type: "string" }, variant: { type: "string" },
     operator: { type: "boolean", default: false },
     live: { type: "boolean", default: false }, artifact: { type: "string" }, member: { type: "string", default: "DEMO-001" },
     port: { type: "string", default: "4173" }, scenario: { type: "string", default: "normal" }, evidence: { type: "string", default: "evidence/runs" },
@@ -48,13 +50,14 @@ async function runCli(args: string[], environment: NodeJS.ProcessEnv, execute: t
   if (command !== "discover" && values.live) throw new ExecutionError("DEMO_CONFIGURATION", "--live is only valid with discover.");
   if ((command === "replay" || command === "handoff") && !values.artifact) throw new ExecutionError("DEMO_CONFIGURATION", "Saved-artifact replay requires --artifact PATH.");
   if ((command === "replay" || command === "handoff") && (values.goal !== undefined || values.target !== undefined)) throw new ExecutionError("DEMO_CONFIGURATION", "Replay uses the saved artifact; --goal and --target are discovery options.");
+  if (values.variant !== undefined && (!["standard", "legacy"].includes(values.variant) || command === "replay" || command === "handoff")) throw new ExecutionError("DEMO_CONFIGURATION", "--variant must be standard or legacy and is a discovery option.");
   const request = demoRequest({ ...(values.goal !== undefined ? { goal: values.goal } : {}), ...(values.target !== undefined ? { target: values.target } : {}) });
   const port = Number(values.port);
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new ExecutionError("DEMO_CONFIGURATION", "Port must be between 1 and 65535.");
   const slowMoMs = Number(values["slow-mo"]);
   if (!Number.isFinite(slowMoMs) || slowMoMs < 0 || slowMoMs > 5000) throw new ExecutionError("DEMO_CONFIGURATION", "--slow-mo must be between 0 and 5000 milliseconds.");
   if (command === "discover" && (!environment.OPENAI_API_KEY || !environment.MODEL_NAME)) throw new ExecutionError("DEMO_CONFIGURATION", "OPENAI_API_KEY and MODEL_NAME are required for live discovery.");
-  let options: DemoOptions = { ...request, directory: values.evidence, memberId: values.member, port, scenario: values.scenario, live: command === "discover", slowMoMs, ...(values.headed ? { headless: false } : {}) };
+  let options: DemoOptions = { ...request, ...(values.variant ? { variant: values.variant as "standard" | "legacy" } : {}), directory: values.evidence, memberId: values.member, port, scenario: values.scenario, live: command === "discover", slowMoMs, ...(values.headed ? { headless: false } : {}) };
   if (command === "offline") options = { ...options, model: new ScriptedDemoModel() };
   if (command === "discover") options = { ...options, model: new OpenAIDiscoveryModel(environment.OPENAI_API_KEY!, environment.MODEL_NAME!) };
   if (command === "replay" || command === "handoff") options = { ...options, artifactPath: values.artifact! };

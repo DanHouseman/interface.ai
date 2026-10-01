@@ -1,0 +1,257 @@
+{
+  "schemaVersion": "1.0",
+  "capability": {
+    "id": "member.lookup",
+    "name": "Member lookup",
+    "version": "1.0.0",
+    "description": "Find a synthetic member and read their savings balance."
+  },
+  "application": {
+    "family": "synthetic-member-desk",
+    "productVersion": "1",
+    "surface": "browser",
+    "compatibilityTags": [
+      "local-demo",
+      "legacy-table"
+    ]
+  },
+  "provenance": {
+    "discoveryRunId": "a64e220a-c0d9-47cf-a231-e306d5497943",
+    "createdAt": "2026-10-01T00:57:17.734Z",
+    "compilerVersion": "0.2.0"
+  },
+  "contract": {
+    "inputs": [
+      {
+        "name": "memberId",
+        "type": "string",
+        "required": true,
+        "sensitive": true,
+        "description": "Member identifier."
+      }
+    ],
+    "outputs": [
+      {
+        "name": "balance",
+        "type": "string",
+        "required": true,
+        "sensitive": true,
+        "description": "Displayed savings balance.",
+        "source": {
+          "targetId": "balance"
+        }
+      }
+    ],
+    "businessOutcomes": [
+      {
+        "code": "MEMBER_NOT_FOUND",
+        "description": "Member does not exist.",
+        "checkpoint": {
+          "id": "missing",
+          "description": "Not-found response",
+          "all": [
+            {
+              "kind": "text_visible",
+              "text": "Member not found"
+            }
+          ]
+        }
+      },
+      {
+        "code": "INVALID_MEMBER_ID",
+        "description": "Member identifier has invalid format.",
+        "checkpoint": {
+          "id": "invalid",
+          "description": "Validation response",
+          "all": [
+            {
+              "kind": "text_visible",
+              "text": "Invalid member ID"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "policy": {
+    "permittedTargets": [
+      "http://127.0.0.1:4173"
+    ],
+    "permittedRoutes": [
+      "/"
+    ],
+    "permittedActionTypes": [
+      "type",
+      "click",
+      "read",
+      "wait"
+    ]
+  },
+  "targets": [
+    {
+      "id": "member",
+      "description": "Member ID",
+      "strategies": [
+        {
+          "kind": "structural",
+          "anchorText": "Member ID",
+          "relation": "ancestor",
+          "controlHint": "input"
+        }
+      ],
+      "requireUniqueMatch": true
+    },
+    {
+      "id": "find",
+      "description": "Find member",
+      "strategies": [
+        {
+          "kind": "structural",
+          "anchorText": "Find member",
+          "relation": "ancestor",
+          "controlHint": "span"
+        }
+      ],
+      "requireUniqueMatch": true
+    },
+    {
+      "id": "open",
+      "description": "Member result",
+      "strategies": [
+        {
+          "kind": "structural",
+          "anchorText": "Member result",
+          "relation": "ancestor",
+          "controlHint": "span"
+        }
+      ],
+      "requireUniqueMatch": true
+    },
+    {
+      "id": "selected",
+      "description": "Selected member",
+      "strategies": [
+        {
+          "kind": "structural",
+          "anchorText": "Selected member",
+          "relation": "ancestor",
+          "controlHint": "span"
+        }
+      ],
+      "requireUniqueMatch": true
+    },
+    {
+      "id": "balance",
+      "description": "Savings balance",
+      "strategies": [
+        {
+          "kind": "structural",
+          "anchorText": "Savings balance",
+          "relation": "ancestor",
+          "controlHint": "span"
+        }
+      ],
+      "requireUniqueMatch": true
+    }
+  ],
+  "steps": [
+    {
+      "id": "discovery-1",
+      "description": "Discovered type action",
+      "action": {
+        "type": "type",
+        "effect": "reversible_write",
+        "targetId": "member",
+        "value": {
+          "kind": "input",
+          "input": "memberId"
+        }
+      },
+      "preconditions": [],
+      "postconditions": [],
+      "recovery": {
+        "retry": {
+          "allowed": false,
+          "maxAttempts": 0,
+          "backoffMs": 0
+        },
+        "onFailure": "intervene",
+        "reconciliationRequiredAfterAmbiguousCommit": true
+      },
+      "humanApprovalRequired": false
+    },
+    {
+      "id": "discovery-2",
+      "description": "Discovered click action",
+      "action": {
+        "type": "click",
+        "effect": "read",
+        "targetId": "find"
+      },
+      "preconditions": [
+        {
+          "id": "operator-ready",
+          "description": "Operator released this session",
+          "all": [
+            {
+              "kind": "text_visible",
+              "text": "Ready"
+            }
+          ]
+        }
+      ],
+      "postconditions": [],
+      "recovery": {
+        "retry": {
+          "allowed": false,
+          "maxAttempts": 0,
+          "backoffMs": 0
+        },
+        "onFailure": "intervene",
+        "reconciliationRequiredAfterAmbiguousCommit": true
+      },
+      "humanApprovalRequired": false
+    },
+    {
+      "id": "discovery-3",
+      "description": "Discovered click action",
+      "action": {
+        "type": "click",
+        "effect": "read",
+        "targetId": "open"
+      },
+      "preconditions": [],
+      "postconditions": [],
+      "recovery": {
+        "retry": {
+          "allowed": false,
+          "maxAttempts": 0,
+          "backoffMs": 0
+        },
+        "onFailure": "intervene",
+        "reconciliationRequiredAfterAmbiguousCommit": true
+      },
+      "humanApprovalRequired": false
+    }
+  ],
+  "successCheckpoint": {
+    "id": "member-detail",
+    "description": "Correct member and savings balance displayed",
+    "all": [
+      {
+        "kind": "text_visible",
+        "text": "Member detail"
+      },
+      {
+        "kind": "target_present",
+        "targetId": "balance"
+      },
+      {
+        "kind": "target_value_equals_input",
+        "targetId": "selected",
+        "input": "memberId"
+      }
+    ],
+    "timeoutMs": 1000
+  }
+}

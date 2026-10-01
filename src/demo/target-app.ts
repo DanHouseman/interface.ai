@@ -12,14 +12,15 @@ export const demoHtml = `<!doctype html><html><head><title>Synthetic Member Desk
 <script>
 const mode=new URLSearchParams(location.search).get('scenario');
 const balances={'DEMO-001':'$123.45','DEMO-002':'$678.90'};
+let restored=false;
 if(mode==='handoff'){document.querySelector('#operator').hidden=false;document.querySelector('#ready').textContent='Waiting for operator';}
-document.querySelector('#unblock').onclick=()=>{document.querySelector('#operator').hidden=true;document.querySelector('#ready').textContent='Ready';};
+document.querySelector('#unblock').onclick=()=>{const expired=document.body.dataset.sessionState==='expired';delete document.body.dataset.sessionState;restored=true;document.querySelector('#operator').hidden=true;document.querySelector('#ready').textContent='Ready';if(expired)document.querySelector('#find').click();};
 document.querySelector('#find').onclick=()=>{
  if(!document.querySelector('#operator').hidden)return;
  const id=document.querySelector('#member').value;
  const result=document.querySelector('#result');result.textContent='Loading';
  setTimeout(()=>{
- if(mode==='expired'){document.body.dataset.sessionState='expired';result.textContent='Session expired';return;}
+ if(mode==='expired'&&!restored){document.body.dataset.sessionState='expired';result.textContent='Session expired';document.querySelector('#ready').textContent='Session expired';document.querySelector('#operator').hidden=false;return;}
  if(mode==='denied'){result.textContent='Permission denied';return;}
  if(!/^DEMO-\\d{3}$/.test(id)){result.textContent='Invalid member ID';return;}
  if(!balances[id]){result.textContent='Member not found';return;}
@@ -29,11 +30,31 @@ document.querySelector('#find').onclick=()=>{
 };
 </script></body></html>`;
 
-export async function startDemoApp(port = 0): Promise<{ url: string; close: () => Promise<void> }> {
+// Deliberately non-semantic proxy: tables, clickable spans, no IDs, labels,
+// roles or test attributes. Application code keeps references; automation uses
+// reviewed relationships to visible anchors.
+export const legacyDemoHtml = `<!doctype html><html><head><title>Legacy Member Desk</title></head><body>
+<h1>Legacy Member Desk</h1><p>Ready</p>
+<table><tbody><tr><td>Member ID</td><td><input autocomplete="off"></td></tr>
+<tr><td><span tabindex="0">Find member</span></td></tr></tbody></table>
+<div></div><section></section>
+<script>
+const input=document.querySelector('input'), find=document.querySelector('span'), result=document.querySelector('div'), detail=document.querySelector('section'), ready=document.querySelector('p');
+const mode=new URLSearchParams(location.search).get('scenario'), balances={'DEMO-001':'$123.45','DEMO-002':'$678.90'};
+find.onclick=()=>{const id=input.value;result.textContent='Loading';setTimeout(()=>{
+ if(mode==='denied'){ready.textContent='Permission denied';return;}
+ if(!/^DEMO-\\d{3}$/.test(id)){result.textContent='Invalid member ID';return;}
+ if(!balances[id]){result.textContent='Member not found';return;}
+ result.innerHTML='<table><tr><td>Member result</td><td><span tabindex="0">Open member</span></td></tr></table>';
+ result.querySelector('span').onclick=()=>{detail.innerHTML='<h2>Member detail</h2><table><tr><td>Selected member</td><td><span></span></td></tr><tr><td>Savings balance</td><td><span></span></td></tr></table>';const values=detail.querySelectorAll('span');values[0].textContent=id;values[1].textContent=balances[id];};
+ },mode==='slow'?150:0);};
+</script></body></html>`;
+
+export async function startDemoApp(port = 0, variant: "standard" | "legacy" = "standard"): Promise<{ url: string; close: () => Promise<void> }> {
   const server = createServer((request, response) => {
     if (request.url?.split("?")[0] !== "/") { response.writeHead(404).end("Not found"); return; }
     response.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
-    response.end(demoHtml);
+    response.end(variant === "legacy" ? legacyDemoHtml : demoHtml);
   });
   await new Promise<void>((resolve, reject) => {
     server.once("error", reject);

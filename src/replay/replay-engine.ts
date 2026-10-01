@@ -84,6 +84,9 @@ export class DeterministicReplayEngine {
       const outcome = await this.businessOutcome(artifact, context, trace, step.id);
       if (outcome) return outcome;
       if (await this.surface.getSessionState() === "expired") return await this.stop(trace, "INTERVENTION_REQUIRED", "SESSION_EXPIRED", "Session expired while resolving a target.", step.id);
+      if (error instanceof ExecutionError && error.code === "TARGET_RESOLUTION_FAILED") {
+        return await this.stop(trace, step.recovery.onFailure === "intervene" ? "INTERVENTION_REQUIRED" : "FAILURE", error.code, "Declared target is unavailable; inspect the step and target strategies.", step.id);
+      }
       throw error;
     }
     const risky = isRiskyAction(step.action);
@@ -127,6 +130,7 @@ export class DeterministicReplayEngine {
 
   private async authorize(artifact: CapabilityArtifact, step: CapabilityStep, context: ExecutionContext, trace: ReplayTraceEvent[]): Promise<ReplayResult | undefined> {
     const observation = await this.surface.observe();
+    if (observation.signals.unexpectedDialog === true) return await this.stop(trace, "INTERVENTION_REQUIRED", "UNEXPECTED_DIALOG", "An unresolved dialog requires human verification.", step.id);
     const decision = this.policy.evaluate({ artifact, step, context, observation });
     trace.push({ kind: "POLICY_DECISION", stepId: step.id, ...decision, timestamp: now() });
     if (decision.disposition === "DENY") return await this.stop(trace, decision.code === "APPROVAL_REQUIRED" ? "INTERVENTION_REQUIRED" : "FAILURE", "POLICY_DENIED", decision.reason, step.id);
@@ -184,7 +188,10 @@ export class DeterministicReplayEngine {
     return committed;
   }
   private async check(artifact: CapabilityArtifact, checkpoint: CapabilityArtifact["successCheckpoint"], phase: "precondition" | "postcondition" | "business_outcome" | "success" | "reconciliation", context: ExecutionContext, trace: ReplayTraceEvent[], stepId?: string): Promise<boolean> {
-    const evaluation = await evaluateCheckpoint(artifact, checkpoint, this.surface, context.inputs);
+    const evaluation = await evaluateCheckpoint(artifact, checkpoint, this.surface, context.inputs, {
+      policy: this.policy, context,
+      record: (id, decision) => trace.push({ kind: "POLICY_DECISION", stepId: id, ...decision, timestamp: now() }),
+    });
     trace.push({ kind: "CHECKPOINT", ...(stepId ? { stepId } : {}), checkpointId: checkpoint.id, phase, ...evaluation, timestamp: now() });
     if (phase !== "business_outcome" || evaluation.passed) await this.evidence(trace, `${phase}:${checkpoint.id}`, stepId);
     return evaluation.passed;

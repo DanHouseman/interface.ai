@@ -106,6 +106,6 @@ describe("checkpoint waiting and input-specific truth", () => {
   it("records unresolved targets including non-Error rejections", async () => {
     const s = surface(); vi.spyOn(s, "resolve").mockRejectedValue("lost handle");
     const r = await evaluateCheckpoint(artifact(), { id: "x", description: "x", all: [{ kind: "target_present", targetId: "t" }] }, s);
-    expect(r.passed).toBe(false); expect(r.observed.join()).toContain("lost handle");
+    expect(r.passed).toBe(false); expect(r.observed.join()).toContain("TARGET_RESOLUTION_FAILED");
   });
 });

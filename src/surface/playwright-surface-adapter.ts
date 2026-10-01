@@ -75,15 +75,32 @@ export class PlaywrightSurfaceAdapter implements SurfaceAdapter {
       };
     }
 
-    // Classify sensitive target values and all page text in one browser task.
-    // The current browser evidence classifier supports reviewed CSS targets;
-    // unsupported classification fails closed instead of persisting raw page text.
+    // Non-CSS controls use the same reviewed resolver as replay. Export projection
+    // discards all raw values/text, so classification timing cannot leak a copy.
+    if (targets.some(target => target.strategies.some(strategy => strategy.kind !== "selector"))) {
+      const targetValues: Record<string, JsonValue> = {};
+      for (const target of targets) {
+        targetValues[target.id] = null;
+        for (const strategy of target.strategies) {
+          if (strategy.kind === "visual" || strategy.kind === "terminal_field") throw new Error("OBSERVATION_CLASSIFICATION_UNSUPPORTED");
+          const locator = this.locatorFor(strategy);
+          const count = await locator.count();
+          if (count > 1 && target.requireUniqueMatch) throw new Error("OBSERVATION_CLASSIFICATION_AMBIGUOUS");
+          if (!count) continue;
+          targetValues[target.id] = await locator.first().evaluate(element => element instanceof HTMLInputElement || element instanceof HTMLSelectElement || element instanceof HTMLTextAreaElement ? element.value : (element as HTMLElement).innerText);
+          break;
+        }
+      }
+      return { ...await this.observe(), targetValues };
+    }
+
+    // CSS classification and page text are captured in one browser task.
+    const cssTargets = targets as readonly (Omit<Target, "strategies"> & { strategies: readonly Extract<TargetStrategy, { kind: "selector" }>[] })[];
     const snapshot = targets.length ? await this.page.evaluate((declared) => {
       const targetValues: Record<string, string | null> = {};
       for (const target of declared) {
         targetValues[target.id] = null;
         for (const strategy of target.strategies) {
-          if (strategy.kind !== "selector") throw new Error("OBSERVATION_CLASSIFICATION_UNSUPPORTED");
           const matches = document.querySelectorAll(strategy.selector);
           if (matches.length > 1 && target.requireUniqueMatch) throw new Error("OBSERVATION_CLASSIFICATION_AMBIGUOUS");
           const element = matches[0];
@@ -94,7 +111,7 @@ export class PlaywrightSurfaceAdapter implements SurfaceAdapter {
         }
       }
       return { text: document.body.innerText, targetValues, title: document.title, location: location.href };
-    }, targets) : { text: await this.page.locator("body").innerText().catch(() => ""), targetValues: {}, title: await this.page.title(), location: this.page.url() };
+    }, cssTargets) : { text: await this.page.locator("body").innerText().catch(() => ""), targetValues: {}, title: await this.page.title(), location: this.page.url() };
     const visibleText = snapshot.text
       .split(/\r?\n/)
       .map((value) => value.trim())
@@ -111,6 +128,7 @@ export class PlaywrightSurfaceAdapter implements SurfaceAdapter {
         session: this.state,
         owner: this.owner,
         sessionId: this.sessionId,
+        unexpectedDialog: this.dialogSeen,
         // With classified targets, avoid a second text snapshot from a later UI state.
         controls: targets.length ? "See declared targets and visibleText" : await this.page.locator("body").ariaSnapshot(),
       },
@@ -142,7 +160,11 @@ export class PlaywrightSurfaceAdapter implements SurfaceAdapter {
     if (this.activeAction) return failure("ACTION_CONFLICT", "Another action is active.", false);
     const pending = this.perform(action);
     this.activeAction = pending;
-    try { return await pending; } finally { this.activeAction = undefined; }
+    try {
+      const result = await pending;
+      if (this.dialogSeen && result.ok) return { ok: false, error: { code: "UNEXPECTED_DIALOG", message: "A dialog interrupted the session; verify state through human handback.", recoverable: false, ambiguousCommit: ["click", "type", "select", "submit"].includes(action.type) } };
+      return result;
+    } finally { this.activeAction = undefined; }
   }
 
   private async perform(action: SurfaceAction): Promise<ActionResult> {
@@ -154,13 +176,12 @@ export class PlaywrightSurfaceAdapter implements SurfaceAdapter {
       );
     }
 
-    this.dialogSeen = false;
     try {
       await this.checkPermission();
       switch (action.type) {
         case "click":
           await this.clickHandle(asBrowserHandle(action.target));
-          return this.dialogSeen ? failure("UNEXPECTED_DIALOG", "Unexpected dialog was dismissed; verify state before continuing.", false) : { ok: true };
+          return { ok: true };
         case "type": {
           const locator = asLocator(action.target);
           await locator.fill(action.value);
@@ -202,6 +223,7 @@ export class PlaywrightSurfaceAdapter implements SurfaceAdapter {
   }
 
   private async checkPermission(): Promise<void> {
+    if (this.dialogSeen) throw new ExecutionError("UNEXPECTED_DIALOG", "An unresolved dialog requires verified human handback.");
     if (this.permissionDeniedSelector && await this.page.locator(this.permissionDeniedSelector).isVisible()) {
       throw new ExecutionError("PERMISSION_DENIED", "Application denied permission.");
     }
@@ -226,7 +248,8 @@ export class PlaywrightSurfaceAdapter implements SurfaceAdapter {
   }
 
   public async getSessionState(): Promise<SessionState> {
-    if (this.page.isClosed() || await this.page.locator('[data-session-state="expired"]').count() > 0) this.state = "expired";
+    this.state = this.page.isClosed() || await this.page.locator('[data-session-state="expired"]').count() > 0
+      ? "expired" : this.owner === "automation" ? "active" : "paused";
     return this.state;
   }
 
@@ -238,9 +261,10 @@ export class PlaywrightSurfaceAdapter implements SurfaceAdapter {
     if (this.page.isClosed()) {
       this.state = "expired";
       this.owner = "none";
-      return;
+      throw new ExecutionError("SESSION_CLOSED", "The browser session is closed; same-session takeover is unavailable.");
     }
-    if (this.owner !== "automation" || this.state !== "active") throw new Error("CONTROL_TRANSFER_CONFLICT");
+    // Authentication expiry must not prevent a human taking the existing window.
+    if (this.owner !== "automation") throw new Error("CONTROL_TRANSFER_CONFLICT");
     this.state = "paused";
     this.owner = "none";
     await this.activeAction;
@@ -249,7 +273,9 @@ export class PlaywrightSurfaceAdapter implements SurfaceAdapter {
 
   public async resume(): Promise<void> {
     if (this.page.isClosed()) throw new Error("Cannot resume a closed browser session.");
-    if (this.owner !== "human" || this.state !== "paused") throw new Error("CONTROL_TRANSFER_CONFLICT");
+    if (this.owner !== "human") throw new Error("CONTROL_TRANSFER_CONFLICT");
+    if (await this.getSessionState() === "expired") throw new ExecutionError("SESSION_EXPIRED", "Restore the application session before returning control.");
+    this.dialogSeen = false;
     this.owner = "automation";
     this.state = "active";
   }

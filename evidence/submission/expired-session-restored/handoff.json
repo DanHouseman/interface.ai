@@ -1,0 +1,62 @@
+[
+  {
+    "timestamp": "2026-10-01T00:57:20.449Z",
+    "phase": "paused",
+    "id": "1112df5e-8eaa-4a2d-b6ff-f617b0921c63",
+    "stepId": "discovery-3",
+    "reason": "SESSION_EXPIRED",
+    "owner": "human",
+    "state": "expired",
+    "evidence": {
+      "id": "browser-evidence-be8ae787-917f-4f40-a594-d6c21f5c770b-2",
+      "kind": "snapshot",
+      "path": "replay/browser-evidence-be8ae787-917f-4f40-a594-d6c21f5c770b-2.json",
+      "metadata": {
+        "format": "structural-dom-v1"
+      }
+    }
+  },
+  {
+    "timestamp": "2026-10-01T00:57:20.483Z",
+    "phase": "handback",
+    "id": "1112df5e-8eaa-4a2d-b6ff-f617b0921c63",
+    "operatorId": "local-operator",
+    "actions": [
+      {
+        "operatorId": "local-operator",
+        "timestamp": "2026-10-01T00:57:20.458Z",
+        "description": "focusin BUTTON",
+        "metadata": {
+          "documentId": 1,
+          "controlPath": "0.1.2.0"
+        }
+      },
+      {
+        "operatorId": "local-operator",
+        "timestamp": "2026-10-01T00:57:20.458Z",
+        "description": "click BUTTON",
+        "metadata": {
+          "documentId": 1,
+          "controlPath": "0.1.2.0"
+        }
+      },
+      {
+        "operatorId": "local-operator",
+        "timestamp": "2026-10-01T00:57:20.459Z",
+        "description": "click BUTTON",
+        "metadata": {
+          "documentId": 1,
+          "controlPath": "0.1.4.0.1.1.0"
+        }
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-10-01T00:57:20.487Z",
+    "phase": "resumed",
+    "id": "1112df5e-8eaa-4a2d-b6ff-f617b0921c63",
+    "verified": true,
+    "owner": "automation",
+    "state": "active"
+  }
+]

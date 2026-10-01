@@ -1,5 +1,28 @@
 # Implementation Progress
 
+## 09/30/2026 Assignment Review Gap Closure
+
+### Changes in priority order
+
+1. **G1/G5: authority and privacy.** Checkpoint reads now use the effective invocation policy in every checkpoint phase. Export sanitization projects observations onto host-reviewed workflow text and finite session state; raw diagnostic strings, titles, URLs, control trees, and action values are omitted. Goal/rationale text is restricted to reviewed workflow vocabulary. Model control metadata is kept separate from untrusted observations so sensitive target names cannot erase grant definitions.
+2. **G3/G4: escalation and session recovery.** Missing targets follow `onFailure`. Expired but open sessions can transfer to an operator; premature handback remains blocked, and closed sessions produce an explicit error. The synthetic application supports a real same-window restore path.
+3. **G2: dialogs.** Dialog detection persists across all action types and delayed events until verified handback. Uncertain side effects retain reconciliation requirements. Discovery, replay admission, and checkpoint verification all recognize the pending dialog.
+4. **G6: human audit.** Records identify controls using numeric DOM paths and host-assigned document IDs. Navigation, focus, input/change, clicks, and non-printable control keys are captured without URLs, labels, element IDs, printable keystrokes, or values. The exposed binding validates event data.
+5. **G7: legacy targeting.** `--variant legacy` supplies a real table-based application with no IDs, semantic labels, roles, or test attributes. Structural targets support successful discovery/replay, new inputs, slow responses, validation outcomes, not-found results, and permission denial. Sensitive target classification now supports non-CSS locator strategies.
+
+### Verification
+
+- `npm run typecheck` and build passed.
+- `npm run coverage`: **282 tests across 20 files**, 100% statements (1452/1452), branches (1110/1110), functions (249/249), and lines (1078/1078). Thresholds and configured coverage scope were preserved.
+- Additional regressions reproduce the original authorization, privacy, expiry, missing-target, and dialog defects, and verify their repaired behavior.
+- Captured four successful real-browser runs, including original genuine-artifact replay, structural legacy discovery, changed-input legacy replay, and expired-session recovery without repeated prefix actions.
+- Submission verifier: **118 hashed files, 13 parsed artifacts**, expected outcomes and handoff assertions, zero tested sensitive matches, and portable references resolved.
+- TypeScript production changes, test fixtures, scripts, and documentation passed whitespace/syntax checks.
+
+### Evidence and scope
+
+Historical genuine-provider and human evidence is unchanged. Newly captured discovery uses an offline scripted fixture; new takeover evidence uses an automated operator callback. No authenticated model call was made. Public repository access, remote CI, and submission email remain separate delivery checks. Optional stretch goals were not added.
+
 ## 09/26/2026 Assignment Alignment Fixes
 
 ### Completed

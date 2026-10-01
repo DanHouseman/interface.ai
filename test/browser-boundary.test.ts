@@ -60,6 +60,10 @@ describe("browser boundary failure modes", () => {
     await expect(s.observe([target()])).rejects.toThrow("OBSERVATION_CLASSIFICATION_AMBIGUOUS");
     expect((await s.observe([{ ...target(), requireUniqueMatch: false }])).targetValues).toEqual({ t: "text" });
     await expect(s.observe([target([{ kind: "visual", description: "pixel", x: 1, y: 1 }])])).rejects.toThrow("OBSERVATION_CLASSIFICATION_UNSUPPORTED");
+    for (const element of [new Input(), new Select(), new Textarea(), new Element()]) {
+      m.setElement(element);
+      expect((await s.observe([target([{ kind: "label", text: "Field", exact: true }])])).targetValues).toEqual({ t: "value" in element ? element.value : element.innerText });
+    }
     m.raw.isClosed.mockReturnValue(true);
     expect((await s.observe([target()])).targetValues).toEqual({ t: null });
   });
@@ -113,13 +117,35 @@ describe("browser boundary failure modes", () => {
 // Milestone 10 | Assignment §3.6 | REQ-HITL-003
 describe("human activity recording", () => {
   it("records event kinds and tags only while the human owns the session", async () => {
-    const handlers = new Map<string, (event: unknown) => void>(); let binding!: (_source: unknown, kind: string, tag: string) => Promise<void>;
+    const handlers = new Map<string, (event: unknown) => void>(); let binding!: (_source: unknown, kind: string, tag: string, path: number[], key: string | null) => Promise<void>;
+    class RecordedElement { tagName = "INPUT"; parentElement: RecordedElement | null = null; children: RecordedElement[] = []; }
+    class KeyEvent { constructor(public target: RecordedElement, public key: string) {} }
+    vi.stubGlobal("Element", RecordedElement); vi.stubGlobal("KeyboardEvent", KeyEvent);
     vi.stubGlobal("document", { addEventListener: (kind: string, fn: (event: unknown) => void) => handlers.set(kind, fn) });
-    vi.stubGlobal("window", { __recordHumanAction: (kind: string, tag: string) => binding({}, kind, tag) });
-    const page = { exposeBinding: async (_name: string, fn: typeof binding) => { binding = fn; }, addInitScript: async () => {}, evaluate: async (fn: () => void) => fn() } as unknown as Page;
+    const frame = {};
+    vi.stubGlobal("window", { __recordHumanAction: (kind: string, tag: string, path: number[], key: string | null) => binding({ frame }, kind, tag, path, key) });
+    let navigated!: (frame: unknown) => Promise<void>;
+    const page = { on: (_name: string, fn: typeof navigated) => { navigated = fn; }, mainFrame: () => frame, exposeBinding: async (_name: string, fn: typeof binding) => { binding = fn; }, addInitScript: async () => {}, evaluate: async (fn: () => void) => fn() } as unknown as Page;
     const s = new FakeSurfaceAdapter(); const records = await recordHumanActions(page, s, "operator");
-    handlers.get("click")!({ target: { tagName: "BUTTON", value: "secret-canary" } }); await Promise.resolve(); expect(records).toHaveLength(0);
-    await s.pause(); handlers.get("change")!({ target: { tagName: "INPUT", value: "secret-canary" } }); await Promise.resolve();
-    expect(records[0]!.description).toBe("change INPUT"); expect(JSON.stringify(records)).not.toContain("canary");
+    handlers.get("click")!({ target: new RecordedElement() }); await Promise.resolve(); expect(records).toHaveLength(0);
+    await s.pause(); handlers.get("change")!({ target: new RecordedElement() }); await Promise.resolve();
+    expect(records[0]!.description).toBe("change INPUT"); expect(records[0]!.metadata).toMatchObject({ documentId: 1, controlPath: "0" });
+    const parent = new RecordedElement(), child = new RecordedElement(); parent.children = [child]; child.parentElement = parent;
+    handlers.get("keydown")!(new KeyEvent(child, "Enter")); await Promise.resolve();
+    expect(records.at(-1)!.metadata).toMatchObject({ controlPath: "0.0", key: "Enter" });
+    const count = records.length;
+    handlers.get("keydown")!(new KeyEvent(child, "PRIVATE_KEY"));
+    handlers.get("click")!({ target: null });
+    const untrusted = binding as (...args: unknown[]) => Promise<void>;
+    for (const [kind, tag, path, key] of [["unknown", "INPUT", [0], null], [42, "INPUT", [0], null], ["click", "INPUT", null, null], ["click", "INPUT", [], null], ["click", "INPUT", Array(101).fill(0), null], ["click", "INPUT", [-1], null], ["keydown", "INPUT", [0], "PRIVATE_KEY"], ["keydown", "INPUT", [0], 5]]) await untrusted({ frame }, kind, tag, path, key);
+    expect(records).toHaveLength(count);
+    await untrusted({ frame }, "click", "PRIVATE_TAG", [1], null);
+    expect(records.at(-1)!.description).toBe("click ELEMENT");
+    await untrusted({ frame }, "click", 42, [1], null);
+    await navigated(frame); await navigated({});
+    expect(records.at(-1)!.metadata!.mainFrame).toBe(false);
+    await s.resume(); const before = records.length; await navigated(frame); expect(records).toHaveLength(before);
+    expect(JSON.stringify(records)).not.toContain("PRIVATE");
+
   });
 });

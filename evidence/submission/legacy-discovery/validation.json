@@ -1,0 +1,12 @@
+{
+  "purpose": "assignment-gap-regression",
+  "operator": "none",
+  "model": "offline-scripted-fixture",
+  "verified": [
+    "live-browser",
+    "success-checkpoint",
+    "typed-output",
+    "zero-model-calls-during-replay"
+  ],
+  "recordedAt": "2026-10-01T00:57:18.056Z"
+}

@@ -31,14 +31,16 @@ const providerErrorSchema = z.object({ error: z.object({
 // host; the final sanitizer also removes copies from goals, observations and history.
 function modelContext(input: ModelInput): JsonValue {
   const { specification: spec } = input;
-  const context = {
-    goal: input.goal, observation: input.observation, history: input.history,
+  const safe = new EvidenceRedactor(spec, input.inputs).sanitize({ goal: input.goal, observation: input.observation, history: input.history } as unknown as JsonValue) as Record<string, JsonValue>;
+  // Reviewed control metadata is configuration, not observed values. Treating a
+  // target named "balance" as an output value would erase its grants and effects.
+  return {
+    ...safe,
     targets: spec.targets, grants: spec.grants, inputBindings: spec.inputBindings,
     inputs: spec.contract.inputs.map(field => ({ name: field.name, type: field.type,
       present: input.inputs[field.name] !== undefined, hostBound: Object.values(spec.inputBindings).includes(field.name), sensitive: field.sensitive })),
     successCheckpoint: spec.successCheckpoint,
-  };
-  return new EvidenceRedactor(spec, input.inputs).sanitize(context as unknown as JsonValue);
+  } as unknown as JsonValue;
 }
 
 // Milestone 5 | Assignment §3.1 | REQ-DISC-001/004

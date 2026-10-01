@@ -1,0 +1,403 @@
+{
+  "disposition": "SUCCESS",
+  "code": "SUCCESS",
+  "message": "[OMITTED]",
+  "trace": [
+    {
+      "kind": "STEP_STARTED",
+      "stepId": "discovery-1",
+      "timestamp": "2026-10-01T00:57:18.223Z"
+    },
+    {
+      "kind": "SESSION_STATE",
+      "stepId": "discovery-1",
+      "state": "active",
+      "timestamp": "2026-10-01T00:57:18.233Z"
+    },
+    {
+      "kind": "POLICY_DECISION",
+      "stepId": "discovery-1",
+      "disposition": "ALLOW",
+      "code": "POLICY_ALLOWED",
+      "reason": "Action and destination are within configured authority.",
+      "timestamp": "2026-10-01T00:57:18.240Z"
+    },
+    {
+      "kind": "CHECKPOINT",
+      "stepId": "discovery-1",
+      "checkpointId": "missing",
+      "phase": "business_outcome",
+      "passed": false,
+      "expected": [
+        "{\"kind\":\"text_visible\",\"text\":\"Member not found\"}"
+      ],
+      "observed": [
+        "text:Member not found:visible:false"
+      ],
+      "timestamp": "2026-10-01T00:57:18.245Z"
+    },
+    {
+      "kind": "CHECKPOINT",
+      "stepId": "discovery-1",
+      "checkpointId": "invalid",
+      "phase": "business_outcome",
+      "passed": false,
+      "expected": [
+        "{\"kind\":\"text_visible\",\"text\":\"Invalid member ID\"}"
+      ],
+      "observed": [
+        "text:Invalid member ID:visible:false"
+      ],
+      "timestamp": "2026-10-01T00:57:18.249Z"
+    },
+    {
+      "kind": "TARGET_RESOLVED",
+      "stepId": "discovery-1",
+      "targetId": "member",
+      "strategyKind": "structural",
+      "timestamp": "2026-10-01T00:57:18.253Z"
+    },
+    {
+      "kind": "POLICY_DECISION",
+      "stepId": "discovery-1",
+      "disposition": "ALLOW",
+      "code": "POLICY_ALLOWED",
+      "reason": "Action and destination are within configured authority.",
+      "timestamp": "2026-10-01T00:57:18.256Z"
+    },
+    {
+      "kind": "ACTION_RESULT",
+      "stepId": "discovery-1",
+      "attempt": 1,
+      "ok": true,
+      "timestamp": "2026-10-01T00:57:18.267Z"
+    },
+    {
+      "kind": "CHECKPOINT",
+      "stepId": "discovery-1",
+      "checkpointId": "missing",
+      "phase": "business_outcome",
+      "passed": false,
+      "expected": [
+        "{\"kind\":\"text_visible\",\"text\":\"Member not found\"}"
+      ],
+      "observed": [
+        "text:Member not found:visible:false"
+      ],
+      "timestamp": "2026-10-01T00:57:18.271Z"
+    },
+    {
+      "kind": "CHECKPOINT",
+      "stepId": "discovery-1",
+      "checkpointId": "invalid",
+      "phase": "business_outcome",
+      "passed": false,
+      "expected": [
+        "{\"kind\":\"text_visible\",\"text\":\"Invalid member ID\"}"
+      ],
+      "observed": [
+        "text:Invalid member ID:visible:false"
+      ],
+      "timestamp": "2026-10-01T00:57:18.274Z"
+    },
+    {
+      "kind": "STEP_COMPLETED",
+      "stepId": "discovery-1",
+      "timestamp": "2026-10-01T00:57:18.274Z"
+    },
+    {
+      "kind": "STEP_STARTED",
+      "stepId": "discovery-2",
+      "timestamp": "2026-10-01T00:57:18.274Z"
+    },
+    {
+      "kind": "SESSION_STATE",
+      "stepId": "discovery-2",
+      "state": "active",
+      "timestamp": "2026-10-01T00:57:18.275Z"
+    },
+    {
+      "kind": "POLICY_DECISION",
+      "stepId": "discovery-2",
+      "disposition": "ALLOW",
+      "code": "POLICY_ALLOWED",
+      "reason": "Action and destination are within configured authority.",
+      "timestamp": "2026-10-01T00:57:18.278Z"
+    },
+    {
+      "kind": "CHECKPOINT",
+      "stepId": "discovery-2",
+      "checkpointId": "missing",
+      "phase": "business_outcome",
+      "passed": false,
+      "expected": [
+        "{\"kind\":\"text_visible\",\"text\":\"Member not found\"}"
+      ],
+      "observed": [
+        "text:Member not found:visible:false"
+      ],
+      "timestamp": "2026-10-01T00:57:18.281Z"
+    },
+    {
+      "kind": "CHECKPOINT",
+      "stepId": "discovery-2",
+      "checkpointId": "invalid",
+      "phase": "business_outcome",
+      "passed": false,
+      "expected": [
+        "{\"kind\":\"text_visible\",\"text\":\"Invalid member ID\"}"
+      ],
+      "observed": [
+        "text:Invalid member ID:visible:false"
+      ],
+      "timestamp": "2026-10-01T00:57:18.285Z"
+    },
+    {
+      "kind": "CHECKPOINT",
+      "stepId": "discovery-2",
+      "checkpointId": "operator-ready",
+      "phase": "precondition",
+      "passed": true,
+      "expected": [
+        "{\"kind\":\"text_visible\",\"text\":\"Ready\"}"
+      ],
+      "observed": [
+        "text:Ready:visible:true"
+      ],
+      "timestamp": "2026-10-01T00:57:18.288Z"
+    },
+    {
+      "kind": "EVIDENCE",
+      "stepId": "discovery-2",
+      "evidence": {
+        "id": "browser-evidence-c4812266-f54d-4cdd-9813-9235fd9ed92c-0",
+        "kind": "snapshot",
+        "path": "replay/browser-evidence-c4812266-f54d-4cdd-9813-9235fd9ed92c-0.json",
+        "metadata": {
+          "format": "structural-dom-v1"
+        }
+      },
+      "timestamp": "2026-10-01T00:57:18.299Z"
+    },
+    {
+      "kind": "TARGET_RESOLVED",
+      "stepId": "discovery-2",
+      "targetId": "find",
+      "strategyKind": "structural",
+      "timestamp": "2026-10-01T00:57:18.302Z"
+    },
+    {
+      "kind": "POLICY_DECISION",
+      "stepId": "discovery-2",
+      "disposition": "ALLOW",
+      "code": "POLICY_ALLOWED",
+      "reason": "Action and destination are within configured authority.",
+      "timestamp": "2026-10-01T00:57:18.304Z"
+    },
+    {
+      "kind": "ACTION_RESULT",
+      "stepId": "discovery-2",
+      "attempt": 1,
+      "ok": true,
+      "timestamp": "2026-10-01T00:57:18.338Z"
+    },
+    {
+      "kind": "CHECKPOINT",
+      "stepId": "discovery-2",
+      "checkpointId": "missing",
+      "phase": "business_outcome",
+      "passed": false,
+      "expected": [
+        "{\"kind\":\"text_visible\",\"text\":\"Member not found\"}"
+      ],
+      "observed": [
+        "text:Member not found:visible:false"
+      ],
+      "timestamp": "2026-10-01T00:57:18.343Z"
+    },
+    {
+      "kind": "CHECKPOINT",
+      "stepId": "discovery-2",
+      "checkpointId": "invalid",
+      "phase": "business_outcome",
+      "passed": false,
+      "expected": [
+        "{\"kind\":\"text_visible\",\"text\":\"Invalid member ID\"}"
+      ],
+      "observed": [
+        "text:Invalid member ID:visible:false"
+      ],
+      "timestamp": "2026-10-01T00:57:18.347Z"
+    },
+    {
+      "kind": "STEP_COMPLETED",
+      "stepId": "discovery-2",
+      "timestamp": "2026-10-01T00:57:18.347Z"
+    },
+    {
+      "kind": "STEP_STARTED",
+      "stepId": "discovery-3",
+      "timestamp": "2026-10-01T00:57:18.347Z"
+    },
+    {
+      "kind": "SESSION_STATE",
+      "stepId": "discovery-3",
+      "state": "active",
+      "timestamp": "2026-10-01T00:57:18.347Z"
+    },
+    {
+      "kind": "POLICY_DECISION",
+      "stepId": "discovery-3",
+      "disposition": "ALLOW",
+      "code": "POLICY_ALLOWED",
+      "reason": "Action and destination are within configured authority.",
+      "timestamp": "2026-10-01T00:57:18.349Z"
+    },
+    {
+      "kind": "CHECKPOINT",
+      "stepId": "discovery-3",
+      "checkpointId": "missing",
+      "phase": "business_outcome",
+      "passed": false,
+      "expected": [
+        "{\"kind\":\"text_visible\",\"text\":\"Member not found\"}"
+      ],
+      "observed": [
+        "text:Member not found:visible:false"
+      ],
+      "timestamp": "2026-10-01T00:57:18.403Z"
+    },
+    {
+      "kind": "CHECKPOINT",
+      "stepId": "discovery-3",
+      "checkpointId": "invalid",
+      "phase": "business_outcome",
+      "passed": false,
+      "expected": [
+        "{\"kind\":\"text_visible\",\"text\":\"Invalid member ID\"}"
+      ],
+      "observed": [
+        "text:Invalid member ID:visible:false"
+      ],
+      "timestamp": "2026-10-01T00:57:18.406Z"
+    },
+    {
+      "kind": "TARGET_RESOLVED",
+      "stepId": "discovery-3",
+      "targetId": "open",
+      "strategyKind": "structural",
+      "timestamp": "2026-10-01T00:57:18.585Z"
+    },
+    {
+      "kind": "POLICY_DECISION",
+      "stepId": "discovery-3",
+      "disposition": "ALLOW",
+      "code": "POLICY_ALLOWED",
+      "reason": "Action and destination are within configured authority.",
+      "timestamp": "2026-10-01T00:57:18.587Z"
+    },
+    {
+      "kind": "ACTION_RESULT",
+      "stepId": "discovery-3",
+      "attempt": 1,
+      "ok": true,
+      "timestamp": "2026-10-01T00:57:18.604Z"
+    },
+    {
+      "kind": "CHECKPOINT",
+      "stepId": "discovery-3",
+      "checkpointId": "missing",
+      "phase": "business_outcome",
+      "passed": false,
+      "expected": [
+        "{\"kind\":\"text_visible\",\"text\":\"Member not found\"}"
+      ],
+      "observed": [
+        "text:Member not found:visible:false"
+      ],
+      "timestamp": "2026-10-01T00:57:18.610Z"
+    },
+    {
+      "kind": "CHECKPOINT",
+      "stepId": "discovery-3",
+      "checkpointId": "invalid",
+      "phase": "business_outcome",
+      "passed": false,
+      "expected": [
+        "{\"kind\":\"text_visible\",\"text\":\"Invalid member ID\"}"
+      ],
+      "observed": [
+        "text:Invalid member ID:visible:false"
+      ],
+      "timestamp": "2026-10-01T00:57:18.616Z"
+    },
+    {
+      "kind": "STEP_COMPLETED",
+      "stepId": "discovery-3",
+      "timestamp": "2026-10-01T00:57:18.616Z"
+    },
+    {
+      "kind": "POLICY_DECISION",
+      "stepId": "checkpoint:member-detail:selected",
+      "disposition": "ALLOW",
+      "code": "POLICY_ALLOWED",
+      "reason": "Action and destination are within configured authority.",
+      "timestamp": "2026-10-01T00:57:18.631Z"
+    },
+    {
+      "kind": "CHECKPOINT",
+      "checkpointId": "member-detail",
+      "phase": "success",
+      "passed": true,
+      "expected": [
+        "{\"kind\":\"text_visible\",\"text\":\"Member detail\"}",
+        "{\"kind\":\"target_present\",\"targetId\":\"balance\"}",
+        "{\"kind\":\"target_value_equals_input\",\"targetId\":\"selected\",\"input\":\"memberId\"}"
+      ],
+      "observed": [
+        "text:Member detail:visible:true",
+        "target:balance:structural",
+        "target:selected:structural",
+        "read_ok:true:matches_input:true"
+      ],
+      "timestamp": "2026-10-01T00:57:18.636Z"
+    },
+    {
+      "kind": "EVIDENCE",
+      "evidence": {
+        "id": "browser-evidence-c4812266-f54d-4cdd-9813-9235fd9ed92c-1",
+        "kind": "snapshot",
+        "path": "replay/browser-evidence-c4812266-f54d-4cdd-9813-9235fd9ed92c-1.json",
+        "metadata": {
+          "format": "structural-dom-v1"
+        }
+      },
+      "timestamp": "2026-10-01T00:57:18.641Z"
+    },
+    {
+      "kind": "POLICY_DECISION",
+      "stepId": "output:balance",
+      "disposition": "ALLOW",
+      "code": "POLICY_ALLOWED",
+      "reason": "Action and destination are within configured authority.",
+      "timestamp": "2026-10-01T00:57:18.646Z"
+    },
+    {
+      "kind": "TARGET_RESOLVED",
+      "stepId": "output:balance",
+      "targetId": "balance",
+      "strategyKind": "structural",
+      "timestamp": "2026-10-01T00:57:18.648Z"
+    },
+    {
+      "kind": "ACTION_RESULT",
+      "stepId": "output:balance",
+      "attempt": 1,
+      "ok": true,
+      "timestamp": "2026-10-01T00:57:18.652Z"
+    }
+  ],
+  "outputs": {
+    "balance": "[REDACTED]"
+  }
+}

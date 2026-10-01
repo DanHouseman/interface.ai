@@ -52,13 +52,13 @@ assert.equal(genuine.provider.calls.length, genuine.decisionCount);
 assert(genuine.provider.calls.every(call => call.httpStatus === 200 && call.status === 'completed' && call.requestId && call.responseId));
 const original = parseCapabilityArtifact(await read('genuine-discovery/artifact.json'));
 assert.equal(original.provenance.discoveryRunId, genuine.runId);
-for (const name of ['second-input-replay', 'current-replay', 'not-found', 'expired-session', 'replay-handoff', 'rejected-handback']) {
+for (const name of ['second-input-replay', 'current-replay', 'not-found', 'expired-session', 'replay-handoff', 'rejected-handback', 'gap-current-replay', 'expired-session-restored']) {
   const manifest = await read(`${name}/manifest.json`);
   assert.equal(manifest.provider, null);
   assert.equal(manifest.modelCallsDuringReplay, 0);
   assert.deepEqual(parseCapabilityArtifact(await read(`${name}/artifact.json`)), original);
 }
-for (const name of ['genuine-discovery', 'second-input-replay', 'current-replay', 'replay-handoff', 'discovery-handoff']) {
+for (const name of ['genuine-discovery', 'second-input-replay', 'current-replay', 'replay-handoff', 'discovery-handoff', 'legacy-discovery', 'legacy-second-input', 'gap-current-replay', 'expired-session-restored']) {
   assert.equal((await read(`${name}/replay.json`)).disposition, 'SUCCESS');
 }
 assert.equal((await read('not-found/replay.json')).code, 'MEMBER_NOT_FOUND');
@@ -75,4 +75,17 @@ assert.equal(handoff[0].owner, 'human');
 assert.equal(handoff[2].owner, 'automation');
 assert.equal(handoff[2].verified, true);
 assert(handoff[1].actions.some(action => action.description === 'click BUTTON'));
+const legacy = parseCapabilityArtifact(await read('legacy-discovery/artifact.json'));
+assert(legacy.application.compatibilityTags.includes('legacy-table'));
+assert(legacy.targets.every(target => target.strategies.every(strategy => strategy.kind === 'structural')));
+assert.deepEqual(parseCapabilityArtifact(await read('legacy-second-input/artifact.json')), legacy);
+assert.equal((await read('legacy-discovery/discovery-manifest.json')).discoveryMode, 'offline-scripted-fixture');
+assert.equal((await read('legacy-second-input/manifest.json')).modelCallsDuringReplay, 0);
+const restored = await read('expired-session-restored/replay.json');
+assert.equal(restored.trace.filter(event => event.kind === 'HANDOFF').length, 1);
+assert.equal(restored.trace.filter(event => event.kind === 'ACTION_RESULT' && event.stepId === 'discovery-1').length, 1);
+assert.equal((await read('expired-session-restored/validation.json')).operator, 'automated-test-operator');
+const restoredHandoff = await read('expired-session-restored/handoff.json');
+assert.deepEqual(restoredHandoff.map(event => event.phase), ['paused', 'handback', 'resumed']);
+assert(restoredHandoff[1].actions.some(action => action.description === 'click BUTTON' && action.metadata.controlPath && action.metadata.documentId));
 console.log(`Submission evidence verified: ${files.length} hashed files, ${artifacts} parsed artifacts, zero tested sensitive matches; all referenced snapshots resolve.`);

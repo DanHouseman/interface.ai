@@ -1,5 +1,8 @@
 # P0 security validation
 
+> Current update (September 30, 2026): the later assignment-review fixes supersede historical CSS-only classification and unrestricted free-text export limitations described below. Checkpoint reads enforce host policy; exports use reviewed text projection; structural/accessibility classification, expired-session recovery, dialog latching, and detailed human audit records are validated. See the latest [ELOG entry](./ELOG.md) and [curated evidence](./evidence/submission/README.md). Historical provider evidence is preserved.
+
+
 Updated: 2026-09-21. Original automated validation: 2026-09-20. Runtime: Node v24.21.0, satisfying package.json's ^24.3.0 requirement.
 
 | Acceptance gate | Result | Evidence classification |

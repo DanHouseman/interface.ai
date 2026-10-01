@@ -35,6 +35,10 @@ export class DiscoveryEngine {
           const sensitiveTargets = new Set(request.specification.contract.outputs.filter(field => field.sensitive).map(field => field.source.targetId));
           const observation = await this.surface.observe(request.specification.targets.filter(target => sensitiveTargets.has(target.id)));
           trace.push({ kind: "OBSERVATION", step: index, observation });
+          if (observation.signals.unexpectedDialog === true) {
+            if (await intervene("UNEXPECTED_DIALOG", index, index < request.maxSteps)) continue;
+            return fail("UNEXPECTED_DIALOG", "An unresolved dialog requires human verification.", "INTERVENTION_REQUIRED");
+          }
           if (!observation.location || evaluateLocation(observation.location, request.specification.policy)) return fail("POLICY_DENIED", "Observed location is outside discovery authority.");
           const decision = discoveryDecisionSchema.parse(await this.model.decide({ goal: request.goal, observation, history: trace, specification: request.specification, inputs: request.inputs, signal }));
           signal.throwIfAborted();
@@ -54,7 +58,7 @@ export class DiscoveryEngine {
           }
           if (decision.kind === "complete") {
             // Completion is a model proposal, verified against an independently declared condition.
-            const evaluation = await evaluateCheckpoint(artifact, artifact.successCheckpoint, this.surface, request.inputs);
+            const evaluation = await evaluateCheckpoint(artifact, artifact.successCheckpoint, this.surface, request.inputs, { policy: new ConfigurablePolicyEvaluator(request.specification.policy), context });
             trace.push({ kind: "CHECKPOINT", step: index, checkpointId: artifact.successCheckpoint.id, ...evaluation, timestamp: new Date().toISOString() });
             if (!evaluation.passed) {
               if (await intervene("GOAL_NOT_VERIFIED", index, index < request.maxSteps)) continue;
@@ -63,7 +67,7 @@ export class DiscoveryEngine {
             return { disposition: "SUCCESS", runId: request.runId, trace, outputs: {} };
           }
           for (const checkpoint of step.preconditions) {
-            if (!(await evaluateCheckpoint(artifact, checkpoint, this.surface, request.inputs)).passed) {
+            if (!(await evaluateCheckpoint(artifact, checkpoint, this.surface, request.inputs, { policy: new ConfigurablePolicyEvaluator(request.specification.policy), context })).passed) {
               if (await intervene("PRECONDITION_FAILED", index, index < request.maxSteps)) continue discoveryLoop;
               return fail("PRECONDITION_FAILED", "Discovery requires a verified state before acting.", "INTERVENTION_REQUIRED");
             }

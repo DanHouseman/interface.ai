@@ -33,7 +33,7 @@ describe("checkpoint edge cases", () => {
       {kind:"url_matches",pattern:"["},{kind:"title_matches",pattern:"["},{kind:"text_visible",text:"no"},{kind:"target_present",targetId:"undeclared"},{kind:"target_present",targetId:"present"},{kind:"session_state",state:"active"},{kind:"adapter_signal",name:"answer",expected:2}
     ]},surface);
     expect(result.passed).toBe(false);
-    expect(result.observed).toContain("");
+    expect(result.observed).toContain("matched:false");
     expect(result.observed.join(" ")).toContain("undeclared");
     expect(result.observed.join(" ")).toContain("target:present:selector");
   });

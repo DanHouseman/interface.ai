@@ -125,7 +125,7 @@ describe("P0 evidence persistence boundary", () => {
       for (const event of JSON.parse(persisted).trace) {
         if (event.kind === "EVIDENCE") expect(JSON.parse(await readFile(event.evidence.path, "utf8"))).toHaveProperty("structure");
       }
-      expect(persisted).toContain("Public diagnostic"); expect(persisted).toContain('"balance": "[REDACTED]"');
+      expect(persisted).not.toContain("Public diagnostic"); expect(persisted).toContain('"balance": "[REDACTED]"');
       if (artifact) expect(parseCapabilityArtifact(JSON.parse(await readFile(join(directory, "artifact.json"), "utf8"))).provenance.discoveryRunId).toBe(req.runId);
     } finally { await browser.close(); }
   });
@@ -182,7 +182,7 @@ describe("failed replay checkpoint privacy", () => {
       expect(result.code).toBe(scenario === "wrong-type" ? "INVALID_OUTPUT_TYPE" : scenario === "failed-checkpoint" ? "SUCCESS_CHECKPOINT_FAILED" : "MISSING_OUTPUT");
       expect(result.outputs).toBeUndefined();
       expect(JSON.stringify(result.trace)).not.toContain(outputCanary);
-      expect(JSON.stringify(result.trace)).toContain("Public diagnostic");
+      expect(JSON.stringify(result.trace)).toContain(scenario === "failed-checkpoint" ? "Absent confirmation" : "Public diagnostic");
       await writeRunBundle(directory, artifact, { memberId: inputCanary }, {}, { replay: result as unknown as JsonValue });
       expect((await scan(directory)).length).toBeGreaterThan(1);
     } finally { await browser.close(); }
@@ -193,6 +193,6 @@ describe("failed replay checkpoint privacy", () => {
     const surface = new FakeSurfaceAdapter(); surface.setObservation({ signals: { privateFlag: false } });
     const evaluation = await evaluateCheckpoint(artifact, { id: "flag", description: "flag", all: [{ kind: "adapter_signal", name: "privateFlag", expected: true }] }, surface);
     expect(evaluation.passed).toBe(false);
-    expect(evaluation.observed).toEqual(["adapter_signal:privateFlag:[REDACTED]"]);
+    expect(evaluation.observed).toEqual(["adapter_signal:privateFlag:matches:[REDACTED]"]);
   });
 });

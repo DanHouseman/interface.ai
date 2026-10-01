@@ -1,0 +1,129 @@
+{
+  "structure": [
+    {
+      "tag": "h1",
+      "children": 0,
+      "visible": true
+    },
+    {
+      "tag": "p",
+      "children": 0,
+      "visible": true
+    },
+    {
+      "tag": "div",
+      "children": 1,
+      "visible": false
+    },
+    {
+      "tag": "button",
+      "children": 0,
+      "visible": false
+    },
+    {
+      "tag": "p",
+      "children": 0,
+      "visible": true
+    },
+    {
+      "tag": "table",
+      "children": 1,
+      "visible": true
+    },
+    {
+      "tag": "tbody",
+      "children": 2,
+      "visible": true
+    },
+    {
+      "tag": "tr",
+      "children": 2,
+      "visible": true
+    },
+    {
+      "tag": "td",
+      "children": 1,
+      "visible": true
+    },
+    {
+      "tag": "label",
+      "children": 0,
+      "visible": true
+    },
+    {
+      "tag": "td",
+      "children": 1,
+      "visible": true
+    },
+    {
+      "tag": "input",
+      "children": 0,
+      "visible": true
+    },
+    {
+      "tag": "tr",
+      "children": 2,
+      "visible": true
+    },
+    {
+      "tag": "td",
+      "children": 0,
+      "visible": true
+    },
+    {
+      "tag": "td",
+      "children": 1,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "children": 0,
+      "visible": true
+    },
+    {
+      "tag": "div",
+      "children": 1,
+      "visible": true
+    },
+    {
+      "tag": "button",
+      "children": 0,
+      "visible": true
+    },
+    {
+      "tag": "div",
+      "children": 3,
+      "visible": true
+    },
+    {
+      "tag": "h2",
+      "children": 0,
+      "visible": true
+    },
+    {
+      "tag": "p",
+      "children": 1,
+      "visible": true
+    },
+    {
+      "tag": "span",
+      "children": 0,
+      "visible": true
+    },
+    {
+      "tag": "p",
+      "children": 1,
+      "visible": true
+    },
+    {
+      "tag": "span",
+      "children": 0,
+      "visible": true
+    },
+    {
+      "tag": "script",
+      "children": 0,
+      "visible": false
+    }
+  ]
+}
