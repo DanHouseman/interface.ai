@@ -1,6 +1,8 @@
 # Submission evidence
 
-Saved runs for the assignment. This is the only evidence directory tracked in Git. The table identifies which runs used a model, a script, a human, or an automated operator.
+I kept the runs below so the results can be checked against the artifacts. This is the only evidence directory tracked in Git. The table separates live-model runs, scripts, real human actions, and automated operator tests.
+
+These runs show what happened in the synthetic demo. They are not a SOC 2 report, PCI DSS validation, regulatory audit, or dedicated prompt-injection evaluation. See the main README's [prompt-injection limitations](../../README.md#prompt-injection) and [financial-services scope](../../README.md#financial-services-use-and-compliance) before using this project beyond the assignment.
 
 | Directory | What it shows | Model / operator |
 | --- | --- | --- |
@@ -18,7 +20,7 @@ Saved runs for the assignment. This is the only evidence directory tracked in Gi
 | [expired-session-restored](./expired-session-restored/) | Expired-session takeover and continuation without repeated steps | Automated operator |
 | [privacy-regression](./privacy-regression/) | Output type mismatch returns `INVALID_OUTPUT_TYPE` without persisting the sensitive value | Modified output contract |
 
-The genuine OpenAI run is `cd70493f-ed42-4aa5-85e6-245d19b81f30`. The discovery handoff used a scripted model and a real human. These are separate runs. The automated handoff cases do not establish human acceptance.
+The genuine OpenAI run is `cd70493f-ed42-4aa5-85e6-245d19b81f30`. The discovery handoff used a scripted model and a real human. These are separate runs. The automated handoff tests do not count as real human interaction.
 
 The privacy regression deliberately changes one output type. The legacy runs use their own structural-targeting artifact. Standard saved-artifact replay cases retain the original capability.
 
@@ -40,9 +42,9 @@ The verifier checks:
 - Snapshot references and portability.
 - Specified sensitive values and credential patterns.
 
-It opens no browser and makes no model calls. Passing these checks establishes consistency and file integrity. It does not independently authenticate the provider run or prove the absence of every possible secret.
+It opens no browser and makes no model calls. Passing means the files are consistent and their hashes match. It cannot independently authenticate a provider run or prove that every possible secret is absent.
 
-The four later regression bundles contain `validation.json` with their fixture and operator details. Historical genuine-provider evidence is unchanged.
+The four regression bundles added after the assignment review contain `validation.json` with their fixture and operator details. The original live-model evidence is unchanged.
 
 ## Provenance
 

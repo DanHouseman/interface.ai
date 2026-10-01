@@ -1,10 +1,21 @@
 # Interface.ai Computer-Use Automation
 
-An LLM works through a task in a browser. The system records the successful flow as a typed capability, then replays it with new inputs and no model calls.
+I built this to let an LLM work through a browser task once, save the successful steps as a typed capability, and replay them with new inputs. Replay makes no model calls.
 
 The model chooses actions. Host policy controls what it can do, and checkpoints verify the result.
 
 ## Quick start
+
+> [!IMPORTANT]
+> **Before we begin, I must state that:**
+>
+> This is an assignment prototype for synthetic data. Do not use it with real customer records, banking credentials, payment card numbers, card verification codes, or PIN data, or connect it to production financial systems without a separate security and compliance review. This is an intended-use restriction, not a guarantee that the software detects or blocks all such data.
+>
+> The repository makes no claim of SOC 2 assurance, PCI DSS compliance, or regulatory approval. Passing tests, redaction, and saved execution traces do not establish those claims.
+>
+> See [Financial-services use and compliance](#financial-services-use-and-compliance) for scope, requirements, and limitations.
+
+Now that's out of the way, let's get it running.
 
 Requires Node.js 26.x and npm.
 
@@ -31,9 +42,9 @@ npm run demo -- --help
 
 The target is a local member-lookup application, `synthetic-member-desk`, running in Chromium. The flow is member entry → search → detail → balance extraction. All member data is synthetic.
 
-Two surfaces are available:
+The demo has two versions:
 
-| Surface | Targeting |
+| Version | Targeting |
 | --- | --- |
 | `standard` | Reviewed CSS IDs |
 | `legacy` | Relationships to visible text in table-based markup, with unlabeled inputs and clickable spans. No IDs, roles, or test attributes. |
@@ -262,6 +273,34 @@ Human-action records include document numbers, numeric control paths, clicks, in
 
 Host configuration and output sensitivity declarations remain trust boundaries. Review both before adding another application. The tests establish protection for the cases covered; they do not prove that every possible secret is handled.
 
+### Prompt injection
+
+Page text is untrusted input. The discovery prompt says this explicitly, and the host limits the model to declared targets, grants, and validated decisions. Sensitive input bindings are filled by the host. Completion requires host-evaluated checkpoints. Saved-capability replay makes no model calls.
+
+These controls constrain what an injected instruction can do. They do not guarantee that discovery will ignore every malicious instruction. An attack could still influence choices among permitted actions or waste steps. Host configuration, grants, and saved artifacts need review before use; schema validation alone does not establish that a workflow is safe.
+
+The checkpoint is only as useful as its condition. The current `text_visible` predicate uses substring matching, so `Ready` can match `Not Ready`. Use stronger state checks for consequential workflows. The test suite covers policy and privacy regression cases, but there is no dedicated adversarial prompt-injection evaluation or measured attack-success rate. Add hostile-page tests and misleading completion states before extending this demo to real applications.
+
+## Financial-services use and compliance
+
+The notice under Quick start sets the intended use: synthetic data only, with no compliance or regulatory approval claimed. Here is what would need review before that scope changes.
+
+| Area | Scope and current status |
+| --- | --- |
+| SOC 2 | A SOC 2 report covers an examination of a service organization's scoped controls. This repository includes no SOC 2 Type I or Type II report. A provider's report does not establish assurance for this deployment. See [AICPA's SOC guidance](https://www.aicpa-cima.com/resources/landing/system-and-organization-controls-soc-suite-of-services). |
+| PCI DSS | Scope depends on payment-data flows, connectivity, and whether systems can affect the cardholder data environment. Avoiding stored card numbers alone does not establish exclusion. This demo includes no PCI DSS assessment or attestation. Determine scope and validation obligations before any payment-related integration. See [PCI SSC's scope guidance](https://www.pcisecuritystandards.org/faqs/1115/). |
+| Customer privacy and financial regulation | Requirements depend on the institution, jurisdiction, data, and workflow. Assess GLBA safeguards and privacy obligations with the relevant regulator's rules. The FTC Safeguards Rule applies to institutions under FTC jurisdiction, not every bank or credit union. See [FTC guidance](https://www.ftc.gov/business-guidance/resources/ftc-safeguards-rule-what-your-business-needs-know). |
+| Third-party risk | Review browser, hosting, and model providers, contracts, data flows, and ongoing oversight. The banking agencies' [third-party risk guidance](https://www.occ.treas.gov/news-issuances/bulletins/2023/bulletin-2023-17.html) describes this lifecycle. The repository's evidence does not perform that review. |
+
+Before I would use this in production, I would need to verify:
+
+- Operator authentication, MFA, role-based access, tenant isolation, and approval authority. Local human-operator labels do not verify identity.
+- Encryption and key management, managed secrets, retention and deletion rules, and access-controlled audit records protected against tampering. Local evidence files and checksums do not provide these operational controls.
+- Provider data handling, retention, residency, and contractual terms. Redaction and request settings alone do not establish confidentiality or compliance across providers.
+- Independent security testing, prompt-injection testing, incident response, recovery, change control, and institution-specific compliance assessment.
+
+The demonstrated workflow is member lookup. Payments, lending decisions, and other consequential financial actions require separate design, authorization, and validation. This documentation describes engineering scope and limitations; it is not a legal opinion or compliance attestation.
+
 ## Results and evidence
 
 | Disposition | Meaning |
@@ -278,13 +317,13 @@ Run bundles include `manifest.json`, `replay.json`, the saved `artifact.json` wh
 
 The trace includes step transitions, policy decisions, target resolution, action attempts, checkpoints, recovery, and evidence references. Terminal discovery results attempt a snapshot. Capture failures are recorded as `EVIDENCE_FAILURE` without replacing the original error. Invalid requests and concurrent-run rejections do not inspect the active session.
 
-The [evidence index](./evidence/submission/README.md) identifies each run's model and operator source. It includes genuine OpenAI discovery, changed-input replay, business outcomes, session expiry and recovery, human takeover, privacy failures, and the legacy surface.
+The [evidence index](./evidence/submission/README.md) identifies each run's model and operator source. It includes genuine OpenAI discovery, changed-input replay, business outcomes, session expiry and recovery, human takeover, privacy failures, and the table-based demo.
 
 ```bash
 npm run verify:evidence
 ```
 
-Only `evidence/submission/` is tracked. Generated runs and archives are ignored. Checksums verify file integrity; they do not authenticate provider execution. Public repository access, remote CI, and email submission remain unverified delivery items.
+Only `evidence/submission/` is tracked. Generated runs and archives are ignored. Checksums verify file integrity; they do not authenticate provider execution.
 
 ## Troubleshooting
 

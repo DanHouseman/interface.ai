@@ -1,69 +1,73 @@
 # Interface.ai Computer-Use Automation
 
-Implementation status: September 30, 2026. Setup and exact demonstration commands are in [README.md](./README.md). Historical run provenance and limitations are in [evidence/submission/README.md](./evidence/submission/README.md).
+Status: September 30, 2026. Commands are in [README.md](./README.md). The [evidence index](./evidence/submission/README.md) identifies live-model, scripted, human, and automated runs.
 
 ## Architecture
 
-The single-process TypeScript application separates discovery, authority, compilation, and replay:
+I split the application into discovery, policy, compilation, and replay. It runs in one TypeScript process.
 
 ```text
-Goal + reviewed application specification -> LLM proposals -> host policy
-  -> real browser actions -> verified trace -> capability artifact
-  -> deterministic replay with new inputs -> structured result
+Goal + reviewed application specification -> model proposals -> host policy
+  -> browser actions -> verified trace -> saved capability
+  -> replay with new inputs -> structured result
 ```
 
-The CLI accepts `--goal` and `--target synthetic-member-desk`; the GUI accepts goal text for the same application. The target ID resolves to the local sample app started on `--port`. Unknown targets and blank or oversized goals are rejected before execution. A privacy-safe projection of the caller's goal reaches the model, while reviewed controls, grants, typed inputs, and member-lookup success conditions remain host-defined. Arbitrary applications and tasks are unsupported. This limits discovery flexibility but makes authority and completion reviewable.
+The CLI accepts `--goal` and `--target synthetic-member-desk`. The GUI accepts goal text for the same local app. Unknown targets and blank or oversized goals fail before execution. The model receives a sanitized goal and reviewed controls. The host defines permissions, input bindings, outputs, and completion conditions. Goal text cannot turn this into an arbitrary-task agent.
 
-OpenAI discovery operates Chromium through Playwright. The model chooses actions from the supplied controls; it cannot invent selectors or permissions. Host checkpoints verify completion. The compiler saves the capability before replay in a fresh browser context. Replay has no model dependency. The offline model is an explicitly scripted fixture, not evidence of LLM discovery.
+OpenAI discovery uses Playwright to operate Chromium. The model selects actions from supplied controls. Host checkpoints verify completion, and the compiler saves the artifact before replay starts in a fresh browser context. Replay has no model dependency. The offline option follows a fixed script.
 
-Replay validation and action construction are separate functions. Shared value binding and risk rules reduce drift between consumers. The local GUI receives snapshots through SSE and sends commands through token-protected HTTP POSTs. This is a convenience around the same execution path, not a distributed orchestration system. Client snapshots are replaced on each event without runtime deep freezing.
+Replay separates validation, action construction, and execution. Shared value-binding and risk rules keep discovery and replay consistent. The GUI receives state through SSE and sends token-protected HTTP commands to the same execution path. It replaces each client snapshot when an update arrives.
 
 ## Artifact schema
 
-The Zod-validated JSON artifact contains schema and capability versions, application metadata, typed inputs/outputs, sensitivity declarations, policy, ordered target strategies, actions, checkpoints, recovery rules, and discovery provenance. It is independent of provider and Playwright types.
+The artifact is JSON validated with Zod. It contains versions, application metadata, typed inputs and outputs, sensitivity declarations, policy, ordered targets and actions, checkpoints, recovery rules, and discovery provenance. It has no Playwright or provider types.
 
-Actions bind invocation inputs by name rather than embedding member values. Parsing checks target/input references, output sources, and unsafe retry configurations. The compiler copies host-reviewed contracts and records successful executed actions separately from the model transcript. Sensitive literals are rejected instead of silently changing executable behavior through redaction.
+Actions refer to invocation inputs by name. The parser checks references, output sources, and unsafe retries. The compiler keeps successful automated actions separate from the model transcript and rejects sensitive literals instead of redacting executable values into something different.
 
-Targets express ordered strategies and uniqueness requirements. The browser adapter supports selectors, accessible roles/labels, structural relationships, and explicit coordinates. The standard workflow uses reviewed CSS IDs. A legacy variant uses nested tables, unlabeled inputs, and clickable spans with no IDs or semantic roles. Its structural anchors and uniqueness checks support discovery, sensitive extraction, and changed-input replay. This is one representative legacy surface, not arbitrary-app support. Compatibility tags document intended applicability; they do not implement automatic version certification.
+Target strategies have a declared order and uniqueness checks. The adapter supports selectors, accessible roles and labels, structural relationships, and explicit coordinates. The standard app uses CSS IDs. The older-style variant uses nested tables, unlabeled inputs, and clickable spans without IDs or semantic roles. Its structural targets support discovery, sensitive extraction, and replay with another input. Compatibility tags describe intended use; they do not certify compatibility.
 
 ## Determinism & error handling
 
-Replay follows artifact order, resolves declared targets deterministically, applies bounded waits/retries, checks policy and session state, verifies checkpoints, and returns typed outputs. Every checkpoint read passes the effective host/artifact policy, including business outcomes and reconciliation. It never asks a model to repair a failing step. Results distinguish success, expected business outcomes, recoverable conditions, intervention, and hard failure. Risky or ambiguous actions require reconciliation; unresolved commit state prohibits blind retry.
+Replay follows the artifact, checks policy and session state, resolves targets, executes actions, and verifies checkpoints. Waits and retries are bounded. Checkpoint reads use the effective host/artifact policy, including business-outcome and reconciliation checks. Replay never asks a model to repair a step.
 
-The demo reports missing members and invalid identifiers as business outcomes. Session expiry permits takeover of the existing window and blocks handback until the application session is restored. Target-resolution failures follow the declared escalation policy. A host-configured permission-denial indicator returns `PERMISSION_DENIED`, including when it appears while a target is being resolved. Unrelated page text does not trigger that classification. Missing targets without the indicator remain `TARGET_RESOLUTION_FAILED`. Classification does not alter artifact permissions or require rewriting older saved capabilities.
+Missing members and invalid identifiers are business outcomes. Expired sessions can pass to an operator, but handback stays blocked until the session is restored. Missing targets follow the declared recovery policy. A configured denial indicator produces `PERMISSION_DENIED`; an ordinary missing target produces `TARGET_RESOLUTION_FAILED`.
 
-Dialogs are latched across action types and delayed events until verified human handback; uncertain writes retain reconciliation requirements. Structured traces identify steps, policy decisions, observed checkpoints, recovery, and evidence. After the discovery loop starts, every terminal result attempts a structural snapshot, including stuck, exhausted-budget, failed-checkpoint, and denied-action paths. Capture errors remain secondary evidence failures. Preflight rejection and concurrent-run rejection do not inspect the live session. Replay also captures failure evidence.
+Unexpected dialogs remain flagged until verified handback. If a write may have committed, replay checks the resulting state before deciding whether to continue or escalate. It cannot blindly repeat an uncertain action.
 
-The curated genuine run records four completed OpenAI calls, three UI actions, successful compilation, and replay. The same artifact succeeds with a second member input and zero model calls. Included exceptional replays show not-found and expired-session outcomes. Current regressions additionally cover permission denial and richer discovery failure capture. These results demonstrate this workflow, not a general reliability rate.
+Traces record policy, targeting, actions, checkpoints, and recovery. Terminal discovery results attempt a structural snapshot after the loop starts. Preflight and concurrent-run rejections do not inspect the active session. Capture failures are recorded separately from the execution result.
+
+The saved genuine run has four completed OpenAI calls, three UI actions, successful compilation, and replay. The same artifact succeeds with another input and zero model calls. Other runs cover missing members, expiry, recovery, and handoff. These are observed cases, not a measured reliability rate across applications.
 
 ## Heterogeneity & multi-tenant
 
-The artifact/replay boundary uses observations, opaque resolved targets, actions, checkpoints, evidence, and session ownership. Consumers depend on the surface capabilities they use: execution, checkpoint evaluation, or handoff. Browser-specific targeting remains inside the Playwright adapter. A legacy-web or desktop adapter could map accessibility or visual controls to these contracts and explicitly reject unsupported strategies. Only Playwright and the test fake are implemented.
+Replay uses surface interfaces for execution, checkpoints, and handoff. Playwright owns browser-specific targeting. A desktop or terminal adapter would map its controls to those contracts and reject unsupported strategies. Only Playwright and the test adapter exist today.
 
-For future reuse, resolve a vendor-family capability with reviewed version and tenant specializations into one validated artifact. Invocation parameters supply data; overrides must be explicit and conflict-checked. Effective authority should intersect deployment policy. Changes to targets, checkpoints, or recovery require revalidation and a new version.
+For tenant reuse, I would start with a vendor-family capability, apply reviewed version and tenant overrides, reject conflicts, then validate the resolved artifact. Invocation parameters supply data. Deployment policy still limits authority. Changes to targeting, checkpoints, or recovery need revalidation and a new version.
 
-Existing checkpoint and target failures expose some drift. A future compatibility preflight could check version/fingerprint expectations, quarantine incompatible artifacts, and require reviewed rediscovery. Representative tenant replays would support promotion. Registry, override merging, drift classification, and promotion infrastructure are design proposals only.
+Current target and checkpoint failures expose some drift. A compatibility preflight could compare expected versions or fingerprints, quarantine mismatches, and require reviewed rediscovery. Tenant replay results could support promotion decisions. The registry, override merger, drift classifier, and promotion process remain design work.
 
 ## Escalation & handoff
 
-Blocked discovery or replay can route an intervention request containing capability, step, reason, observation, and evidence. The coordinator pauses action admission, drains an in-flight action, and transfers ownership of the same browser session to the human. The CLI exposes the existing window and waits for explicit `resume`; the GUI supplies equivalent handback controls. Human events include numeric control paths and document IDs, navigation, click/change/input/focus events, and control keys. Labels, URLs, element IDs, printable keystrokes, and typed values are excluded.
+Blocked discovery or replay produces an intervention request with the step, reason, observation, and evidence. The coordinator stops new actions, drains any action in progress, and transfers the same browser session to the human. The CLI waits for `resume`; the GUI provides handback controls.
 
-Handback verifies readiness before returning control to automation. Replay resumes at the blocked step without restarting the completed prefix. Discovery retains its original step/time budget. Handback cannot grant risky-action approval, renew the budget, or authorize an uncertain retry. Failed verification leaves automation stopped.
+Human records contain document IDs, numeric control paths, event kinds, navigation, and control keys. They exclude values, labels, URLs, element IDs, and printable keystrokes. Handback verifies readiness before automation continues. Replay resumes at the blocked step. Discovery keeps its original time and step limits. Handback cannot approve risky actions or authorize an uncertain retry.
 
-Curated evidence distinguishes genuine human discovery handoff using the offline fixture from automated replay handoff tests. The live-model discovery record is separate. Ownership is in memory, and operator identity is a local label. These are deliberate limits of a minimal real handoff, not authenticated enterprise session management.
+The evidence distinguishes a real human using scripted discovery from automated handoff tests and live-model discovery. Ownership is held in memory. Operator identity is a local label and is not authenticated.
 
 ## Safety
 
-Authority comes from host contracts and policy, never model output or page text. Origin, route, and action checks constrain execution. Browser request guards cover navigation and subresources. Submit/custom actions and irreversible effects receive conservative approval and recovery treatment. Saved artifacts remain bound to their recorded origin and port.
+The host controls origins, routes, actions, and approval requirements. Page text and model output cannot expand those permissions. Browser request guards also check navigation and subresources. Artifacts stay bound to their saved origin and port.
 
-Sensitive input values remain host-bound. Model context and persisted bundles project observations onto reviewed public workflow text and finite session state; raw titles, URLs, control trees, action values, and error messages are omitted. Goal/rationale projection retains only supported vocabulary. Checkpoint diagnostics report matches rather than raw observed values. Provider records retain allowlisted metadata, not raw responses. Structural snapshots omit text, values, attributes, and URLs, sacrificing diagnostic detail to reduce leakage.
+Sensitive input values stay in the host. Model context and saved evidence retain reviewed workflow text, masked values, and limited session state. Raw titles, URLs, control trees, action values, and error messages are omitted. Goal and rationale text use a restricted vocabulary. Checkpoint diagnostics record matches. Provider records contain allowlisted metadata. Structural snapshots omit page text, values, attributes, and URLs. This reduces diagnostic detail.
 
-Tests cover undeclared personal data and encoded copies in goals, UI text, and diagnostics. Classification supports CSS, accessible, label, and structural targets; ambiguous controls fail closed. Raw live state remains in process. Reviewed configuration and typed output sensitivity remain trust boundaries, so new applications require explicit review. Goal text cannot expand grants or redefine the success condition.
+Tests cover undeclared personal data and encoded copies in goals, page text, and diagnostics. Sensitive classification supports CSS, accessibility, label, and structural targets. Ambiguous classification stops the run. Configuration and output sensitivity declarations still need review for each application.
+
+Prompt injection can still influence permitted action choices. There is no dedicated adversarial evaluation, and substring-based text checkpoints can misread a condition such as `Not Ready` as `Ready`. The [README](./README.md#prompt-injection) documents these limits and the [financial-services restrictions](./README.md#financial-services-use-and-compliance). This is a synthetic-data prototype with no compliance assurance claimed.
 
 ## Cuts
 
-The implementation omits arbitrary-app discovery, desktop automation, tenant infrastructure, queues, distributed orchestration, durable handoff leases, and a full co-browsing console. The assignment requires the core browser workflow and credible extension seams; building those systems would not establish additional correctness here.
+I left out arbitrary-app discovery, desktop automation, tenant infrastructure, queues, distributed orchestration, durable handoff leases, and a full operator console. The browser workflow was the priority.
 
-Validation counts and commands are maintained in README and the latest ELOG entry. Tests use scripted or mocked models and do not make authenticated provider calls. The original genuine discovery evidence remains unchanged. `npm run verify:evidence` builds the project and checks the full checksum inventory, parsed artifacts, expected outcomes, and portable snapshot references; hashes establish integrity, not provider authenticity.
+The README and latest ELOG entry record validation counts. Tests use scripted or mocked models. The original live-model evidence is preserved. `npm run verify:evidence` builds the project and checks hashes, artifacts, outcomes, and snapshot references. Hashes check integrity; they cannot authenticate a provider run.
 
-New curated regression bundles demonstrate the legacy surface, changed-input replay, current execution of the genuine artifact, and automated expiry recovery. Broader use still requires application-specific compatibility and error-indicator validation. Public repository accessibility, remote CI, and submission email require separate verification; this report does not assert their completion.
+The later regression bundles cover structural targeting, changed inputs, replay of the genuine artifact, and automated expiry recovery. Another application would need its own compatibility, error-state, security, and acceptance checks.

@@ -1,35 +1,36 @@
-# P0 security validation
+# Security validation notes
 
-> Current update (September 30, 2026): the later assignment-review fixes supersede historical CSS-only classification and unrestricted free-text export limitations described below. Checkpoint reads enforce host policy; exports use reviewed text projection; structural/accessibility classification, expired-session recovery, dialog latching, and detailed human audit records are validated. See the latest [ELOG entry](./ELOG.md) and [curated evidence](./evidence/submission/README.md). Historical provider evidence is preserved.
+This is the record of the September security work, including failed attempts. Later entries resolve some earlier findings. Commands, run IDs, and counts belong to their recorded dates.
 
+As of September 30, checkpoint reads enforce host policy, exports retain reviewed text, and sensitive classification supports structural and accessibility targets. Expired-session recovery, persistent dialog handling, and detailed human records are also covered. See [ELOG.md](./ELOG.md) for the latest checks and the [evidence index](./evidence/submission/README.md) for retained runs.
 
-Updated: 2026-09-21. Original automated validation: 2026-09-20. Runtime: Node v24.21.0, satisfying package.json's ^24.3.0 requirement.
+The original September 20-21 checks used Node 24.21.0 with the package range in effect then. The current project uses Node 26.x. These checks establish the listed cases; they are not a compliance assessment or a dedicated prompt-injection evaluation.
 
-| Acceptance gate | Result | Evidence classification |
+| Check | Result | Evidence |
 | --- | --- | --- |
-| Sensitive invocation data absent from provider HTTP bodies | Passed | Fact, high confidence: transport-level whole-body canary tests |
-| Sensitive discovery outputs absent before persistence | Passed for declared sources supported by the adapter | Fact, high confidence: success and stopped real-browser discovery tests with empty result outputs; recursive file scans |
-| Automated verification and offline integration | Passed | Fact, high confidence: executed commands below |
-| Genuine OpenAI discovery | Passed on 2026-09-21 | User executed the authenticated CLI; inspected evidence records four completed OpenAI responses and independently verified completion |
+| Sensitive invocation data absent from provider HTTP bodies | Passed | transport-level whole-body canary tests |
+| Sensitive discovery outputs absent before persistence | Passed for declared sources supported by the adapter | success and stopped real-browser discovery tests with empty result outputs; recursive file scans |
+| Automated verification and offline integration | Passed | executed commands below |
+| Genuine OpenAI discovery | Passed on 2026-09-21 | Authenticated CLI evidence records four completed OpenAI responses and independently verified completion |
 | Actual provider interoperability | Passed for gpt-4.1-mini-2025-04-14 | Genuine run 02def122-935d-4638-b66b-584849d5bffb, strict structured output, real browser actions, saved artifact and deterministic replay |
 
 ## Scope and design decisions
 
-Objective: preserve goal -> discovery -> external policy/authority -> compiled capability -> deterministic replay, while separating live data, model context, in-memory traces and persisted evidence.
+The goal was to keep live data, model context, traces, and saved evidence separate without changing the discovery-to-replay flow.
 
-Assumptions: host contracts classify sensitive data accurately; adapters are trusted to report declared target values. The local demo uses ordinary CSS selectors. No API key was created, printed, written, or used. Pre-existing documentation changes, deletion of package-lock.json/empty.txt, and unrelated untracked files were left intact.
+At this stage, classification depended on host declarations and standard CSS selectors. Adapters had to report sensitive target values correctly. The automated checks used no API key.
 
-| Decision | Supporting argument | Opposing argument / trade-off | Edge cases and second-order effects |
+| Decision | Why | Cost or limit | Cases checked |
 | --- | --- | --- | --- |
-| Metadata-only invocation DTO plus final context sanitization | Host binding needs actual values; model action selection does not | Models cannot reason about input values omitted from context | Exact-value copies in goals/history/observations are redacted too. Input names/types/presence/binding/targets/grants remain available |
-| Atomic browser snapshot classifies sensitive targets | Avoids races between reading target values and free-text copies | Current classifier supports standard CSS selector strategies only | Unsupported/ambiguous classification fails closed. ARIA text is omitted from classified snapshots to avoid a later inconsistent text capture; visible text and declared targets remain |
-| Two-pass whole-bundle sanitizer at the filesystem boundary | Registers sensitive targets, adapter signals, named fields and read results before redacting earlier errors/provider metadata | Exact-value redaction can also remove coincidentally matching public text | Handles nested values, object-key copies, padded/multiline text normalization, and empty discovery outputs. Missing classification refuses persistence before creating files |
+| Send input metadata and sanitized context | Host binding needs actual values; model action selection does not | Models cannot reason about input values omitted from context | Exact-value copies in goals/history/observations are redacted too. Input names/types/presence/binding/targets/grants remain available |
+| Classify sensitive targets in the same snapshot | Avoids races between reading target values and free-text copies | The classifier at this point supported standard CSS selectors only | Unsupported/ambiguous classification fails closed. ARIA text is omitted from classified snapshots to avoid a later inconsistent text capture; visible text and declared targets remain |
+| Scan the full bundle before writing | Registers sensitive targets, adapter signals, named fields and read results before redacting earlier errors/provider metadata | Exact-value redaction can also remove coincidentally matching public text | Handles nested values, object-key copies, padded/multiline text normalization, and empty discovery outputs. Missing classification refuses persistence before creating files |
 | Persist discovery artifact before replay | Replay/setup failures cannot erase a successful discovery's artifact or provenance | Failed later stages may leave a partial bundle | Discovery manifest is independent; persisted artifact is reparsed with parseCapabilityArtifact |
-| Retain JSON mode and strict local decision schema | Minimal change to the existing provider seam | Provider output is not guaranteed to satisfy the decision schema | Incomplete/failed responses, refusals, empty/ambiguous text, malformed JSON/schema and transport failures stop execution with safe codes |
+| Retain JSON mode and strict local decision schema | Minimal change to the existing provider interface | Provider output is not guaranteed to satisfy the decision schema | Incomplete/failed responses, refusals, empty/ambiguous text, malformed JSON/schema and transport failures stop execution with safe codes |
 
-Strong inference, high confidence: these changes close the identified direct serialization and unregistered discovery-output paths without changing grants, policy authority, host input binding, or replay's model-free execution. They do not prove privacy for undeclared data, arbitrary encodings/transformations, or an adapter that misclassifies its observations. Unsupported sensitive-output locators need an atomic classifier before enabling persistence. No speculative claim of live interoperability is made.
+The tested serialization and discovery-output failures were fixed. Grants, host input binding, and model-free replay stayed unchanged. They do not prove privacy for undeclared data, arbitrary encodings/transformations, or an adapter that misclassifies its observations. Unsupported sensitive-output locators need an atomic classifier before enabling persistence. Live provider validation was still pending at this point.
 
-The Responses API contract was checked against official documentation: [Responses formats/statuses](https://developers.openai.com/api/reference/cli/resources/beta/subresources/responses), [structured outputs](https://developers.openai.com/api/docs/guides/structured-outputs), and [request-ID access](https://developers.openai.com/api/reference/ruby). The implementation retains text.format.json_object, a JSON instruction, string input, store:false, and bounded output tokens. Only one completed decision text is accepted. Request/response IDs, model, HTTP status and timestamps are retained; raw requests, responses, authorization headers and credentials are not provider evidence. Cancellation is propagated through fetch and body consumption; existing discovery deadlines prevent late decisions from executing actions.
+The Responses API contract was checked against official documentation: [Responses formats/statuses](https://developers.openai.com/api/reference/cli/resources/beta/subresources/responses), [structured outputs](https://developers.openai.com/api/docs/guides/structured-outputs), and [request-ID access](https://developers.openai.com/api/reference/ruby). At this stage, requests used `text.format.json_object`, a JSON instruction, string input, `store: false`, and bounded output tokens. The later entries record the switch to strict structured output. Only one completed decision text is accepted. Request/response IDs, model, HTTP status and timestamps are retained; raw requests, responses, authorization headers and credentials are not provider evidence. Cancellation is propagated through fetch and body consumption; existing discovery deadlines prevent late decisions from executing actions.
 
 ## Files changed
 
@@ -49,9 +50,9 @@ The Responses API contract was checked against official documentation: [Response
 - test/browser-boundary.test.ts: classification across text/form values, fallback/missing targets, ambiguity, unsupported targets and closed sessions.
 - P0_SECURITY_VALIDATION.md and evidence/p0-validation/: this record and sanitized offline/test evidence.
 
-## Verification executed
+## Commands and results
 
-All final commands exited 0. Browser tests and demos required execution outside the filesystem/network sandbox to launch Chromium and bind the local HTTP port.
+The final commands below exited 0. Browser tests and demos required execution outside the filesystem/network sandbox to launch Chromium and bind the local HTTP port.
 
 | Exact command | Final result |
 | --- | --- |
@@ -67,7 +68,7 @@ Additional verification: a Node script recursively read every regular file under
 
 Earlier unsuccessful attempts, now resolved:
 
-- npm install --ignore-scripts --package-lock=false failed under restricted networking with ENOTFOUND. npm install --ignore-scripts --package-lock=false --fetch-retries=0 --fetch-timeout=20000 succeeded with network permission. No lockfile was restored over the user's existing deletion.
+- npm install --ignore-scripts --package-lock=false failed under restricted networking with ENOTFOUND. npm install --ignore-scripts --package-lock=false --fetch-retries=0 --fetch-timeout=20000 succeeded with network permission. The existing lockfile deletion was preserved.
 - Initial npm test failed because the sandbox denied localhost binding/Chromium launch and an existing browser mock lacked the newly used evaluate method. The adapter retained its existing no-target path, classification received dedicated mock coverage, and authorized browser tests subsequently passed.
 - First npm run coverage passed all 185 tests but failed the 100% threshold (98.52% statements, 97.86% branches, 99.4% functions, 98.39% lines). Added classification/error-path tests brought every metric to 100%; no threshold was lowered.
 
@@ -84,53 +85,52 @@ All paths below are beneath evidence/p0-validation/:
 - 0f63c9a9-f304-4c87-83b7-fe1cda3687ae/: earlier successful offline verification run.
 - scan-summary.json: recursive scan and artifact-parser counts.
 
-## Original remaining action (resolved by the genuine run below)
+## Live run still needed at this point
 
-Configure OPENAI_API_KEY and MODEL_NAME securely in the environment, then execute the unexecuted live command with a fresh evidence directory. Accept the genuine gate only after host-verified completion, provider/model/response provenance, normal parsing of the saved artifact, and a recursive sensitive-data scan. If the provider rejects JSON mode/model configuration or exhausts the token/iteration budget, diagnose the recorded failure; do not relax policy or checkpoints to obtain success.
+Configure OPENAI_API_KEY and MODEL_NAME securely in the environment, then execute the unexecuted live command with a fresh evidence directory. A passing live run needed host-verified completion, provider metadata, a parsed artifact, and a sensitive-data scan. If the provider rejects JSON mode/model configuration or exhausts the token/iteration budget, diagnose the recorded failure; do not relax policy or checkpoints to obtain success.
 
 ## Live-run troubleshooting follow-up
 
-The user's genuine request with model `gpt-6-astra` reached OpenAI but failed with HTTP 400 before any model decision. Latest inspected evidence: evidence/live-validation/ae4e6f57-318b-4d75-b105-257e94259ef0/. The original provider implementation discarded the HTTP error body, so the rejected parameter cannot be established from that evidence. The earlier display-name attempt returned HTTP 404.
+The live request with model `gpt-6-astra` reached OpenAI but failed with HTTP 400 before any model decision. Latest inspected evidence: evidence/live-validation/ae4e6f57-318b-4d75-b105-257e94259ef0/. The original provider implementation discarded the HTTP error body, so the rejected parameter cannot be established from that evidence. The earlier display-name attempt returned HTTP 404.
 
 Added finite allowlists for provider error type/code/parameter metadata in openai-discovery-model.ts. Unknown strings become null; free-form messages are never persisted. run-demo.ts now exposes an ExecutionError envelope built from sanitized persisted evidence, and cli.ts prints only that envelope before propagating failure. Added regression tests for error-body canaries and safe CLI output in model-and-cli.test.ts. Request parameters and host validation were not changed speculatively.
 
-Follow-up validation: npm run typecheck passed; npm run coverage passed all 193 tests with 100% statements/branches/functions/lines; npm run build and git diff --check passed. No authenticated retry was executed by the agent: the user's shell-exported credential is not available in the agent process. Rerun the same discover --live command in that terminal to obtain the newly retained parameter-level diagnosis. Genuine discovery success remains unverified.
+Follow-up validation: npm run typecheck passed; npm run coverage passed all 193 tests with 100% statements/branches/functions/lines; npm run build and git diff --check passed. No authenticated retry ran during these checks: the CLI shell and automation process had separate environments. Rerun the same discover --live command in that terminal to obtain the newly retained parameter-level diagnosis. Live discovery had not yet succeeded.
 
 ### JSON-mode input correction
 
 The next real attempt (c53873b1-055a-4053-873a-9ab109e81631) returned HTTP 400 with invalid_request_error and param=input. The request previously put its JSON instruction only in top-level instructions; input contained bare serialized workflow data. Changed input to an explicit user message with two input_text parts: a fixed instruction to return JSON and the unchanged sanitized workflow context. This addresses the documented JSON-mode context requirement and is consistent with the observed rejected parameter; the discarded free-form error message prevents proving the exact cause retrospectively.
 
-Added a transport-level regression asserting the explicit JSON instruction in input when workflow context has no JSON keyword; whole-body canary coverage still passes. npm run typecheck, npm run coverage (194 tests, all four coverage metrics 100%), and npm run build passed. No authenticated retry was possible from the agent process. A successful real run remains an open acceptance gate.
+Added a transport-level regression asserting the explicit JSON instruction in input when workflow context has no JSON keyword; whole-body canary coverage still passes. npm run typecheck, npm run coverage (194 tests, all four coverage metrics 100%), and npm run build passed. The automated checks had no credential for a live retry. A successful live run was still needed.
 
 ### HTTP 429 diagnostics
 
-The user's next live attempt (2dc1d5ab-a898-4385-bd7c-930d49ceca54) returned HTTP 429 with null diagnostic fields. Official API error documentation now distinguishes credit_balance_exhausted, organization_spend_limit_exceeded, project_spend_limit_exceeded, organization_usage_limit_exceeded and slow_down; billing errors can use type insufficient_quota. Added these finite values to the diagnostic allowlist with five regression tests. Unknown response text is still excluded. The previous raw response cannot be recovered, so this run's specific quota/rate-limit cause remains unknown.
+The next live attempt (2dc1d5ab-a898-4385-bd7c-930d49ceca54) returned HTTP 429 with null diagnostic fields. Official API error documentation now distinguishes credit_balance_exhausted, organization_spend_limit_exceeded, project_spend_limit_exceeded, organization_usage_limit_exceeded and slow_down; billing errors can use type insufficient_quota. Added these finite values to the diagnostic allowlist with five regression tests. Unknown response text is still excluded. The previous raw response cannot be recovered, so this run's specific quota/rate-limit cause remains unknown.
 
-Validation: npm run typecheck, npm run build, and npm run coverage passed; 199 tests and 100% coverage across all metrics. No live retry was executed by the agent. Check the key's owning API organization/project billing and limits before retrying; billing/spend/usage failures require account-side remediation. Reference: https://developers.openai.com/api/docs/guides/error-codes
+Validation: npm run typecheck, npm run build, and npm run coverage passed; 199 tests and 100% coverage across all metrics. These checks did not include a live retry. Check the key's owning API organization/project billing and limits before retrying; billing/spend/usage failures require account-side remediation. Reference: https://developers.openai.com/api/docs/guides/error-codes
 
 ## 2026-09-21 structured-output schema correction
 
-The genuine gpt-4.1-mini call in run 6663413a-d219-47e3-bad8-1bdf9b16ea88 returned HTTP 200/completed but failed the local decision validator. Changed the provider seam from JSON mode to strict json_schema output with a required decision envelope and explicit nullable action arguments. Null arguments are mapped to omitted host fields; host decision validation, grants, policy and checkpoints are unchanged. Raw malformed output remains unpersisted.
+The genuine gpt-4.1-mini call in run 6663413a-d219-47e3-bad8-1bdf9b16ea88 returned HTTP 200/completed but failed the local decision validator. Changed the provider interface from JSON mode to strict json_schema output with a required decision envelope and explicit nullable action arguments. Null arguments are mapped to omitted host fields; host decision validation, grants, policy and checkpoints are unchanged. Raw malformed output remains unpersisted.
 
 The first verification attempt for that change was rejected by automatic approval review because of a usage limit. The next user run (232a30e1-cfd9-4135-91d9-23d9b1056d0e) returned invalid_json_schema. Inspection of the exact outbound body showed Zod's discriminated union generated oneOf. Replaced the provider-only discriminated union with z.union, which generates the supported nested anyOf while retaining strict object branches and the same literal kind tags.
 
-After the previous usage-limit interval elapsed, npm run typecheck, npm run build, git diff --check and npm run coverage passed. All 202 tests passed with 100% statements, branches, functions and lines. Transport tests inspect the exact outgoing schema (object root, nested anyOf, all fields required, additionalProperties false), test null-to-host mapping, and preserve full-request/evidence canary checks. Genuine provider acceptance of the corrected schema remains unverified until the user's next authenticated run.
+After the previous usage-limit interval elapsed, npm run typecheck, npm run build, git diff --check and npm run coverage passed. All 202 tests passed with 100% statements, branches, functions and lines. Transport tests inspect the exact outgoing schema (object root, nested anyOf, all fields required, additionalProperties false), test null-to-host mapping, and preserve full-request/evidence canary checks. Genuine provider acceptance of the corrected schema remains unverified until the next authenticated run.
 
+## Successful live discovery: 2026-09-21
 
-## Genuine discovery acceptance verified: 2026-09-21
-
-The user executed the authenticated live command successfully. The agent independently inspected the resulting files. Run: `02def122-935d-4638-b66b-584849d5bffb`, under `evidence/live-validation/`.
+The authenticated CLI run succeeded. Its saved files were then inspected separately. Run: `02def122-935d-4638-b66b-584849d5bffb`, under `evidence/live-validation/`.
 
 - Provider: OpenAI; requested model gpt-4.1-mini; actual snapshot gpt-4.1-mini-2025-04-14.
 - Four completed HTTP 200 responses with request/response IDs, producing four decisions and three successful UI actions.
 - All four discovery policy decisions ALLOW; the independent member-detail success checkpoint passed.
 - Discovery and its automatic deterministic replay both returned SUCCESS.
 - artifact.json passes parseCapabilityArtifact and links to the genuine discovery run through provenance.discoveryRunId.
-- The agent then executed `npm run demo -- replay --artifact evidence/live-validation/02def122-935d-4638-b66b-584849d5bffb/artifact.json --port 4173 --member DEMO-002 --evidence evidence/live-validation`.
+- The follow-up command was `npm run demo -- replay --artifact evidence/live-validation/02def122-935d-4638-b66b-584849d5bffb/artifact.json --port 4173 --member DEMO-002 --evidence evidence/live-validation`.
 - That separate replay succeeded, with provider null and modelCallsDuringReplay 0. Its evidence is `evidence/live-validation/282b5e47-c15a-4958-ae4d-912e129c3b56/`; artifact provenance remains linked to the genuine discovery.
 - A recursive scan read all 16 regular files across these two successful bundles. Zero occurrences of either member ID, either demo balance, either sensitive canary, or tested API-key/Bearer-token patterns. This is a scan for specified values/patterns, not a universal claim about all possible sensitive data. Canary presence in live state was independently established by the earlier automated browser tests.
 
-The original missing-credential/live-interoperability blocker is resolved by the user's genuine run. Earlier blocked and failed attempts above are retained as historical validation records. No authenticated call was made by the agent and no API key was copied into the repository. The current standard-CSS sensitive-target classification limitation remains.
+The live run resolved the missing provider-validation step. Earlier blocked and failed attempts above are retained as historical validation records. The inspection made no authenticated calls and copied no API key into the repository. The current standard-CSS sensitive-target classification limitation remains.
 
 ## P0 #6 completed: runtime taxonomy (2026-09-21)
 
@@ -152,7 +152,7 @@ Assertions passed for both runs: saved artifact parses and deep-equals the origi
 
 A recursive scan of all 15 regular files under evidence/runtime-taxonomy, including validation.json, found zero occurrences of the tested member IDs, demo balances, input/output canaries or API-key/Bearer-token patterns. Detailed machine-readable assertions are saved in evidence/runtime-taxonomy/validation.json.
 
-No application source changes were necessary. Builds ran successfully as part of both CLI commands. The full unit/coverage suite was not rerun for this evidence-only task; its last executed result remains 202 passing tests with 100% coverage. These two executions prove the requested business-versus-technical distinction; they do not newly establish every possible runtime exception or recovery path.
+No code changes were needed. Builds ran successfully as part of both CLI commands. The full unit/coverage suite was not rerun for this evidence-only task; its last executed result remains 202 passing tests with 100% coverage. These runs checked the missing-member and expired-session cases. Other failure and recovery paths needed their own tests.
 
 Next unfinished assessment item: #7, genuine headed same-session human takeover and explicit handback.
 
@@ -164,13 +164,13 @@ Executed the documented handoff command against the saved genuine artifact. The 
 npm run demo -- handoff --artifact evidence/live-validation/02def122-935d-4638-b66b-584849d5bffb/artifact.json --port 4173 --member DEMO-001 --evidence evidence/human-handoff
 ```
 
-The user explicitly signaled resume. Run `eaa65b49-ab42-40b8-82a2-5fe532061d96` returned `FAILURE / EXECUTION_FAILED` with message `RESUME_CHECKPOINT_FAILED`. The trace also reports that evidence could not be captured after the page closed. The first step completed, the second step's operator-ready precondition failed, and no second-step action or successful handback was recorded. This is a rejected handback, not successful operator acceptance. The CLI exited 0 despite the failure disposition.
+The operator explicitly requested resume. Run `eaa65b49-ab42-40b8-82a2-5fe532061d96` returned `FAILURE / EXECUTION_FAILED` with message `RESUME_CHECKPOINT_FAILED`. The trace also reports that evidence could not be captured after the page closed. The first step completed, the second step's operator-ready precondition failed, and no second-step action or successful handback was recorded. This is a rejected handback, not successful operator acceptance. The CLI exited 0 despite the failure disposition.
 
-A fresh headed attempt is waiting for the operator to click Release session, leave the page open, and explicitly return control. Report acceptance remains pending. `REPORT.md` has been created with the seven exact assignment headings and states this limitation. No full test-suite rerun is claimed for documentation work.
+A fresh headed attempt is waiting for the operator to click Release session, leave the page open, and explicitly return control. Successful handoff was still pending at that point. `REPORT.md` has been created with the seven exact assignment headings and states this limitation. Documentation changes did not require another full test run.
 
 ### Genuine headed handoff accepted: 2026-09-21
 
-The second execution of the same command returned `SUCCESS / SUCCESS`, exit 0. Run: `ae8edcd1-5ebf-4c32-b32a-417f05a797a3`. The user interacted with the headed browser and explicitly replied Resume; the assistant forwarded `resume` to the waiting CLI without performing the browser action.
+The second execution of the same command returned `SUCCESS / SUCCESS`, exit 0. Run: `ae8edcd1-5ebf-4c32-b32a-417f05a797a3`. The human operator acted in the headed browser and explicitly requested resume. Automation forwarded that handback to the waiting CLI; it did not perform the browser action.
 
 - The first step completed once. The second step stopped at the failed `operator-ready` precondition.
 - `handoff.json` records `change INPUT` and `click BUTTON` during human ownership, without values.
@@ -180,7 +180,7 @@ The second execution of the same command returned `SUCCESS / SUCCESS`, exit 0. R
 - Evidence references retain one adapter session ID. Human-action recording requires human ownership; the coordinator verifies automation ownership before returning. Individual ownership transitions are not separately persisted, so that part of the acceptance argument combines recorded behavior with inspected enforcement code.
 - A recursive scan of 21 files across both handoff attempts and `validation.json` found zero specified member IDs, balances, canaries, or tested API-key/Bearer patterns.
 
-Machine-readable checks: `evidence/human-handoff/validation.json`. The failed first attempt remains preserved. P0 #7 is now validated; #8 is delivered in `REPORT.md`; #9 is documented in README. Generated evidence remains gitignored as requested. Fresh-checkout reproduction and separate reviewer evidence delivery are still outstanding. No application source changed and no full test suite was rerun; builds executed with the handoff commands.
+Machine-readable checks: `evidence/human-handoff/validation.json`. The failed first attempt remains preserved. This completed the handoff check. The report and README covered the remaining documentation items. Generated evidence remains gitignored as requested. Clean-install reproduction and evidence packaging were still open at that point. No application source changed and no full test suite was rerun; builds executed with the handoff commands.
 
 ## Clean-install reproduction and review package: 2026-09-21
 
@@ -213,26 +213,26 @@ Copied the updated manifest and lockfile into the isolated committed-source expo
 
 `npm run demo -- offline --port 4173 --member DEMO-001 --evidence evidence/dependency-validation` returned SUCCESS, run `f0811e3c-41e1-4b82-a53c-d623c51fab69`. This remains an offline scripted discovery test, not a new authenticated provider call. Evidence was copied unchanged into the working repository's ignored directory. The reviewer ZIP was refreshed with current documentation and this evidence, then rescanned and integrity-checked. Earlier audit findings are retained above as historical records and are resolved by this change.
 
-## Reassessment supersedes universal privacy/completion claims: 2026-09-21
+## Privacy failure found during review: 2026-09-21
 
-The current source still passes all 202 coverage tests, but a new real-browser experiment reproduced a sensitive-output persistence defect: change the genuine artifact's sensitive balance type from string to number, replay normally, and inspect the failed run. The result is `INVALID_OUTPUT_TYPE`, outputs are absent, and the checkpoint trace persists the synthetic balance. Scratch evidence is `/private/tmp/interface-audit-B9ANJR/f5a9d883-501d-49e7-b3c0-0523ef48032e/`; it was not copied into submission evidence. Historical zero-match scans above remain true for their specified files and scenarios and do not cover this case.
+The source at this point still passed all 202 coverage tests, but a new real-browser experiment reproduced a sensitive-output persistence defect: change the genuine artifact's sensitive balance type from string to number, replay normally, and inspect the failed run. The result is `INVALID_OUTPUT_TYPE`, outputs are absent, and the checkpoint trace persists the synthetic balance. Scratch evidence is `/private/tmp/interface-audit-B9ANJR/f5a9d883-501d-49e7-b3c0-0523ef48032e/`; it was not copied into submission evidence. Historical zero-match scans above remain true for their specified files and scenarios and do not cover this case.
 
-The audit covered requirement mapping, root cause, and repair gates, including missing discovery-time operator routing. This audit changed documentation only. Current completion status is incomplete, not 100% aligned. The user's working-tree `.gitignore` edit was preserved; evidence is untracked and no public submission occurred.
+The audit covered requirement mapping, root cause, and repair gates, including missing discovery-time operator routing. This audit changed documentation only. The review remained open until those defects were fixed. At that point, evidence remained untracked and no public submission had occurred.
 
-## Audit repairs and evidence completion: 2026-09-22
+## Privacy and handoff fixes: 2026-09-22
 
-F1 is repaired: checkpoint sampling classifies sensitive target/signal values before sanitizing diagnostic strings; the boolean pass result is preserved independently. Real-browser regressions cover wrong/missing outputs, failed final checkpoint and later-output failure. The original wrong-type reproduction now returns `INVALID_OUTPUT_TYPE` without persisting the balance. See `evidence/submission/privacy-regression/`.
+Privacy fix: checkpoint sampling classifies sensitive target/signal values before sanitizing diagnostic strings; the boolean pass result is preserved independently. Real-browser regressions cover wrong/missing outputs, failed final checkpoint and later-output failure. The original wrong-type reproduction now returns `INVALID_OUTPUT_TYPE` without persisting the balance. See `evidence/submission/privacy-regression/`.
 
-F2 is repaired: discovery routes through the existing coordinator and live page with `--operator`. Verified handback reobserves within the original step/time budget. Failed/uncertain actions, approval requirements and exhausted budgets cannot be bypassed. Tests cover cancellation, failed readiness, deadline expiry and prefix preservation. Human phases remain audit data, not silently compiled actions.
+Discovery handoff fix: discovery routes through the existing coordinator and live page with `--operator`. Verified handback reobserves within the original step/time budget. Failed/uncertain actions, approval requirements and exhausted budgets cannot be bypassed. Tests cover cancellation, failed readiness, deadline expiry and prefix preservation. Human phases remain audit data, not silently compiled actions.
 
-Genuine-human verification command: `npm run demo -- offline --operator --scenario discovery-handoff --slow-mo 200 --port 4173 --member DEMO-001 --evidence evidence/audit-fixes`. It succeeded as run `578cd282-8cf4-4ba1-81e6-16fde6528edc`: user clicked Release session and replied Resume; assistant forwarded the explicit handback. This is scripted discovery with a genuine operator, not another provider run.
+Genuine-human verification command: `npm run demo -- offline --operator --scenario discovery-handoff --slow-mo 200 --port 4173 --member DEMO-001 --evidence evidence/audit-fixes`. It succeeded as run `578cd282-8cf4-4ba1-81e6-16fde6528edc`: the human clicked Release session and requested resume; automation forwarded the explicit handback. This is scripted discovery with a genuine operator, not another provider run.
 
-F3 is completed locally: the curated selection uses available successful genuine run `cd70493f-ed42-4aa5-85e6-245d19b81f30`, fresh saved replays, not-found, expiry, automated replay handoff/rejection, privacy regression and genuine-human scripted discovery handoff. Earlier local evidence IDs in this historical record may no longer exist. No past execution is relabeled as a new run.
+Evidence packaging: the curated selection uses available successful genuine run `cd70493f-ed42-4aa5-85e6-245d19b81f30`, fresh saved replays, not-found, expiry, automated replay handoff/rejection, privacy regression and genuine-human scripted discovery handoff. Earlier local evidence IDs in this historical record may no longer exist. No past execution is relabeled as a new run.
 
 Packaging initially stopped on redacted session IDs in snapshot paths, leaving SHA256SUMS.json absent. Curated paths now resolve by unique directory/sequence matches, with original hashes and transformations in PROVENANCE.json. New adapter evidence IDs are independent of session IDs. Source files are unchanged; review copies use relative paths.
 
-`npm run verify:evidence` passes: 81 hashed files, nine parsed artifacts, expected outcomes, unchanged genuine replay artifacts, provider fields, handoff/prefix assertions, all references resolvable, and no specified sensitive-value/API-key/Bearer patterns. This is not a universal privacy proof. The curated repository files, not the old ZIP, are the intended submission evidence.
+`npm run verify:evidence` passes: 81 hashed files, nine parsed artifacts, expected outcomes, unchanged genuine replay artifacts, provider fields, handoff/prefix assertions, all references resolvable, and no specified sensitive-value/API-key/Bearer patterns. The scan covers the specified values and patterns only. The curated repository files, not the old ZIP, are the intended submission evidence.
 
-CLI verification: `npm run demo` exits 0 and prints help; --headed shows the browser; --slow-mo slows actions. Missing/invalid artifact preflight occurs before launch and produces safe codes. Server, origin and browser failures also have safe diagnostics. The user's reported `7194ab5b-5400-4608-93c9-6ed706f2fd47` path does not exist locally; use `evidence/submission/genuine-discovery/artifact.json`.
+CLI verification: `npm run demo` exits 0 and prints help; --headed shows the browser; --slow-mo slows actions. Missing/invalid artifact preflight occurs before launch and produces safe codes. Server, origin and browser failures also have safe diagnostics. The reported `7194ab5b-5400-4608-93c9-6ed706f2fd47` path was missing locally; the retained example is `evidence/submission/genuine-discovery/artifact.json`.
 
-Under Node 26.10.0, typecheck/build and 232 coverage tests pass: statements 1042/1042, branches 765/765, functions 182/182, lines 819/819. The user's Node 26 dependency changes are retained and the exact runtime pin is widened to ^26.6.2. The intermediate 231-test run had 99.6% branch coverage and was not accepted. No new npm audit, authenticated model call, or remote CI result is claimed for this pass.
+Under Node 26.10.0, typecheck/build and 232 coverage tests pass: statements 1042/1042, branches 765/765, functions 182/182, lines 819/819. The Node 26 dependency changes are retained and the exact runtime pin is widened to ^26.6.2. The intermediate 231-test run had 99.6% branch coverage and was not accepted. No new npm audit, authenticated model call, or remote CI result is claimed for this pass.
