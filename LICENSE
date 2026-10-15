@@ -1,21 +1,418 @@
-MIT License
+PROPRIETARY SOURCE CODE LICENSE
 
-Copyright (c) 2026 DanDrewMan
+Project: interface.ai
+License: Proprietary — All Rights Reserved
+Copyright © 2026 Dan Houseman. All Rights Reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Effective Date: October 15, 2026
+Version: 1.0
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+⸻
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+IMPORTANT NOTICE
+
+THIS SOFTWARE IS PROPRIETARY AND IS NOT OPEN SOURCE.
+
+No license, authorization, or permission is granted to use, execute, copy, reproduce, modify, distribute, sublicense, reverse engineer, create derivative works from, or otherwise exploit the Software, except as expressly authorized in writing by the Copyright Holder or permitted by applicable law.
+
+Access to the Software, including through a publicly accessible repository, does not constitute permission to use it.
+
+ALL RIGHTS ARE EXPRESSLY RESERVED.
+
+⸻
+
+1. Definitions
+
+For purposes of this License:
+
+1.1. “Software” means the original source code and other copyrighted materials comprising the interface.ai project, including, where owned by the Copyright Holder:
+
+* Source code and executable code.
+* Software components, modules, and libraries.
+* Original implementations of algorithms and computational methods.
+* Application programming interfaces and their original implementations.
+* Data structures, schemas, and configurations containing protected expression.
+* Build scripts, deployment configurations, and automation.
+* Original technical documentation and specifications.
+* User interface implementations and original visual assets.
+* Tests, test fixtures, and supporting development materials.
+* Updates, revisions, and modifications owned by the Copyright Holder.
+
+1.2. “Copyright Holder” means Dan Houseman, or any lawful successor or assignee of the relevant intellectual property rights.
+
+1.3. “Derivative Work” means a work based upon one or more preexisting copyrighted works, as defined by applicable copyright law.
+
+1.4. “Authorization” means express written permission granted by the Copyright Holder or an authorized representative.
+
+1.5. “Third Party” means any individual, organization, or legal entity other than the Copyright Holder.
+
+⸻
+
+2. Intellectual Property Ownership
+
+2.1. Exclusive Ownership
+
+The Copyright Holder retains all rights, title, and interest in the Software to the extent such rights are owned by the Copyright Holder.
+
+These rights include, without limitation, the exclusive rights recognized under applicable copyright law to:
+
+1. Reproduce the Software.
+2. Prepare derivative works based upon the Software.
+3. Distribute copies of the Software.
+4. Publicly display protected portions of the Software.
+5. Authorize others to exercise these rights.
+
+2.2. No Transfer of Ownership
+
+Nothing in this License constitutes or implies:
+
+* An assignment of copyright.
+* A transfer of intellectual property ownership.
+* A grant of a software license.
+* A waiver of intellectual property rights.
+* A grant of rights to create derivative works.
+* An authorization for commercial exploitation.
+
+2.3. Reservation of Rights
+
+All rights not expressly granted through a separate written agreement are reserved by the Copyright Holder.
+
+⸻
+
+3. No License Granted
+
+3.1. General Prohibition
+
+No Third Party receives any license or permission under this document to access, use, execute, reproduce, modify, distribute, or otherwise exploit the Software.
+
+Any authorization must be expressly granted by the Copyright Holder through a separate written agreement.
+
+3.2. No Implied License
+
+No license shall be inferred solely from:
+
+* Public availability of source code.
+* Publication in a source control repository.
+* Access to documentation.
+* Possession of a copy of the Software.
+* Participation in discussions concerning the Software.
+* Disclosure of technical information.
+* Failure by the Copyright Holder to immediately enforce a restriction.
+
+This provision does not override rights that cannot lawfully be excluded or permissions arising under binding third-party platform terms.
+
+3.3. No Open-Source Grant
+
+This License is not an open-source license.
+
+The Software may not be treated as public-domain software, freeware, or software distributed under an open-source license merely because its source code is accessible.
+
+⸻
+
+4. Restrictions on Use
+
+Except as expressly authorized in writing or permitted by applicable law, Third Parties are prohibited from:
+
+4.1. Execution and Operation
+
+* Executing or running the Software.
+* Deploying the Software to local or remote systems.
+* Hosting the Software as a service.
+* Operating the Software for personal, educational, research, or commercial purposes.
+
+4.2. Reproduction
+
+* Copying or reproducing the Software.
+* Downloading or cloning the repository for unauthorized purposes.
+* Creating unauthorized backups or archives.
+* Republishing protected source code.
+* Mirroring or redistributing repository contents.
+
+4.3. Modification
+
+* Modifying or adapting the Software.
+* Translating the Software into another programming language.
+* Creating unauthorized modified versions.
+* Preparing derivative works incorporating protected expression from the Software.
+
+4.4. Distribution
+
+* Publishing or distributing copies.
+* Selling or licensing copies.
+* Sublicensing the Software.
+* Transferring unauthorized copies to another party.
+* Including protected portions in software packages or distributions.
+
+4.5. Commercial Exploitation
+
+* Incorporating protected portions into commercial products.
+* Offering the Software as a commercial service.
+* Reselling or sublicensing the Software.
+* Monetizing unauthorized reproductions or derivative works.
+* Commercially exploiting protected implementations without Authorization.
+
+⸻
+
+5. Derivative Works and Adaptations
+
+5.1. Exclusive Rights
+
+The Copyright Holder exclusively reserves the right to authorize preparation of derivative works based upon the Software.
+
+5.2. Unauthorized Derivative Works
+
+Without Authorization, Third Parties may not prepare, reproduce, distribute, or commercially exploit derivative works incorporating protected expression from the Software.
+
+This includes unauthorized adaptations, translations, modifications, and other works that qualify as derivative works under applicable law.
+
+5.3. Independent Development
+
+Nothing in this License prohibits the lawful independent development of software that implements similar ideas, concepts, methods, or functionality without infringing protected intellectual property rights.
+
+Copyright protection does not extend to abstract ideas, systems, methods of operation, or independently developed implementations merely because they achieve similar results.
+
+⸻
+
+6. Artificial Intelligence and Machine Learning Restrictions
+
+6.1. No Authorization for AI Training
+
+No permission is granted to reproduce, collect, process, or otherwise use protected portions of the Software for:
+
+* Training machine learning models.
+* Fine-tuning existing models.
+* Creating machine learning training datasets.
+* Developing code-generation models.
+* Building synthetic datasets derived from protected source code.
+* Creating unauthorized derivative implementations through AI-assisted development.
+
+6.2. Automated Collection
+
+No permission is granted to scrape, crawl, harvest, or systematically extract protected repository contents for unauthorized purposes.
+
+6.3. Model Outputs
+
+No permission is granted to reproduce or distribute protected expression from the Software through AI-generated outputs.
+
+6.4. Applicable Law
+
+These restrictions reserve the Copyright Holder’s rights to the fullest extent permitted by applicable law.
+
+They do not eliminate statutory exceptions, defenses, or rights that cannot legally be restricted through this notice.
+
+⸻
+
+7. Reverse Engineering and Security Analysis
+
+No permission is granted to:
+
+* Reverse engineer the Software.
+* Decompile or disassemble executable components.
+* Circumvent technical protection mechanisms.
+* Extract protected implementation details through unauthorized means.
+* Reconstruct protected source code from distributed binaries.
+
+These restrictions apply only to the extent enforceable under applicable law.
+
+Nothing in this License prohibits activities expressly permitted by applicable law, including applicable interoperability, security research, or reverse engineering exceptions.
+
+⸻
+
+8. Repository Access and Availability
+
+8.1. Public Access
+
+If the Software is hosted in a publicly accessible repository, such availability does not constitute a general license to use, reproduce, modify, or distribute it.
+
+8.2. Repository Platform Terms
+
+Repository hosting services may require the Copyright Holder to grant certain rights under their terms of service.
+
+Nothing in this License supersedes permissions that the Copyright Holder has validly granted through binding platform agreements.
+
+8.3. Unauthorized Forks and Copies
+
+No general permission is granted to create or distribute forks, mirrors, or copies of the Software.
+
+Any rights arising under applicable law, existing licenses, or binding platform terms remain unaffected.
+
+⸻
+
+9. Third-Party Dependencies
+
+The Software may incorporate or depend upon third-party components.
+
+Such components remain subject to their respective copyright notices, licenses, and legal requirements.
+
+This License does not:
+
+* Transfer ownership of third-party intellectual property.
+* Revoke rights granted by third-party licenses.
+* Supersede applicable open-source license obligations.
+* Impose proprietary restrictions on independently licensed third-party materials.
+
+Where required, applicable third-party license notices and attribution must be preserved.
+
+⸻
+
+10. Contributions
+
+10.1. No Automatic Transfer
+
+Submission of code, documentation, or other contributions does not automatically transfer copyright ownership to the Copyright Holder.
+
+10.2. Contribution Authorization
+
+Contributions may be accepted subject to a separate written Contributor License Agreement or copyright assignment.
+
+10.3. Unauthorized Contributions
+
+The Copyright Holder is not obligated to accept, merge, distribute, or maintain unsolicited contributions.
+
+10.4. Contributor Rights
+
+Contributors retain any rights they possess unless those rights have been validly assigned or licensed through a separate agreement.
+
+⸻
+
+11. Confidentiality and Trade Secrets
+
+11.1. Confidential Materials
+
+Materials separately identified as confidential, or disclosed under an enforceable confidentiality agreement, must be handled according to the applicable confidentiality obligations.
+
+11.2. No General Confidentiality Obligation
+
+Mere access to publicly available Software does not, by itself, create a contractual confidentiality obligation.
+
+11.3. Trade Secret Protection
+
+The Copyright Holder reserves any applicable trade secret rights in information that independently satisfies the legal requirements for trade secret protection.
+
+⸻
+
+12. Trademarks and Project Identity
+
+12.1. No Trademark License
+
+This License grants no rights to use any trademarks, service marks, trade names, or logos belonging to the Copyright Holder or any Third Party.
+
+12.2. Project Name
+
+The designation “interface.ai” identifies the software project for purposes of this document.
+
+Its inclusion does not establish ownership of any corresponding trademark, domain name, or business identity.
+
+12.3. No Affiliation
+
+This software project is not represented as being affiliated with, sponsored by, endorsed by, or associated with any separately existing company operating under the name Interface.ai.
+
+⸻
+
+13. Prior Licenses and Existing Rights
+
+13.1. Existing Grants
+
+Nothing in this License retroactively revokes rights previously granted under a valid, irrevocable license.
+
+13.2. Future Distributions
+
+To the extent the Copyright Holder possesses the necessary rights, future distributions of the Software may be made subject to this License.
+
+13.3. Third-Party Rights
+
+This License does not restrict rights lawfully held by other copyright owners, contributors, or licensees.
+
+⸻
+
+14. Enforcement and Remedies
+
+14.1. Unauthorized Activities
+
+Unauthorized exploitation of protected intellectual property may constitute copyright infringement or another violation of applicable law.
+
+14.2. Available Remedies
+
+The Copyright Holder reserves the right to pursue all remedies available under applicable law, which may include:
+
+* Injunctive relief.
+* Monetary damages.
+* Recovery of profits where legally available.
+* Statutory damages where applicable.
+* Recovery of legal costs and attorney fees where permitted.
+* Removal of infringing material through applicable legal procedures.
+
+14.3. No Waiver
+
+Failure to enforce a right in a particular instance does not, by itself, constitute a waiver of that right in other circumstances.
+
+⸻
+
+15. Disclaimer of Warranties
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE SOFTWARE IS PROVIDED “AS IS” AND “AS AVAILABLE,” WITHOUT WARRANTIES OF ANY KIND, WHETHER EXPRESS, IMPLIED, OR STATUTORY.
+
+THE COPYRIGHT HOLDER DISCLAIMS ALL WARRANTIES, INCLUDING IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NONINFRINGEMENT.
+
+NO REPRESENTATION IS MADE THAT THE SOFTWARE WILL OPERATE WITHOUT INTERRUPTION, DEFECT, OR ERROR.
+
+⸻
+
+16. Limitation of Liability
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE COPYRIGHT HOLDER SHALL NOT BE LIABLE FOR INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES ARISING FROM UNAUTHORIZED USE OF THE SOFTWARE.
+
+NOTHING IN THIS SECTION EXCLUDES LIABILITY THAT CANNOT LAWFULLY BE EXCLUDED.
+
+⸻
+
+17. Severability
+
+If any provision of this License is determined to be invalid or unenforceable, that determination shall not automatically invalidate the remaining provisions.
+
+The remaining provisions shall continue to apply to the extent permitted by law.
+
+⸻
+
+18. Governing Law
+
+To the extent applicable to a legally binding agreement between the relevant parties, this License shall be interpreted under the laws of the State of Ohio, United States, without regard to conflicting choice-of-law principles.
+
+Nothing in this provision limits mandatory legal protections or statutory rights applicable in another jurisdiction.
+
+⸻
+
+19. Written Authorization
+
+Any permission to use, reproduce, modify, distribute, sublicense, or create derivative works from the Software must be obtained through a separate written authorization issued by the Copyright Holder or an authorized representative.
+
+Such authorization may define:
+
+* Permitted uses.
+* Scope of access.
+* Distribution rights.
+* Modification rights.
+* Commercial restrictions.
+* Duration.
+* Termination conditions.
+* Additional contractual obligations.
+
+No authorization is implied by this License.
+
+⸻
+
+20. Final Reservation of Rights
+
+The Copyright Holder expressly reserves all intellectual property rights in the Software that the Copyright Holder lawfully possesses.
+
+No permission is granted under this document to use, execute, copy, reproduce, modify, distribute, sublicense, commercially exploit, or prepare derivative works based upon the Software.
+
+Any permission must arise from a separate valid authorization or an applicable legal right.
+
+⸻
+
+Copyright © 2026 Dan Houseman. All Rights Reserved.
+
+PROPRIETARY SOFTWARE — NO LICENSE GRANTED.
+
+END OF LICENSE

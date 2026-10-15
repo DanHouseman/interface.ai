@@ -372,6 +372,59 @@ notes.md       Engineering notes
 
 Before production use: persistent job and artifact storage, managed secrets, tenant isolation, authenticated operator access, and stronger browser/session management. Validate compatibility and error indicators for each application before enabling unattended replay.
 
+
 ## License
+
+PROPRIETARY SOURCE CODE LICENSE
+
+Project: interface.ai
+Copyright © 2026 Dan Houseman. All Rights Reserved.
+
+1. Ownership
+
+All original source code, software implementations, and associated copyrighted materials comprising interface.ai are proprietary intellectual property of  Dan Houseman.
+
+All rights, title, and interest in such intellectual property are expressly reserved by the copyright holder.
+
+2. No License Granted
+
+No permission or license is granted to any individual, organization, or entity to use, execute, copy, reproduce, modify, distribute, sublicense, or commercially exploit this source code without prior express written authorization from the copyright holder.
+
+3. Restrictions
+
+Without prior written authorization, the following activities are prohibited to the fullest extent permitted by applicable law:
+
+* Using or executing the source code.
+* Copying, reproducing, or redistributing the source code.
+* Modifying, adapting, or translating the source code.
+* Creating derivative works based upon the source code.
+* Incorporating protected portions into other software or services.
+* Using the source code for AI model training, fine-tuning, or dataset creation.
+* Selling, licensing, or commercially exploiting the source code.
+
+4. Reservation of Rights
+
+Public availability, repository access, or possession of the source code does not constitute a grant of intellectual property rights beyond those required by applicable law or binding platform terms.
+
+All rights not expressly granted through a separate written agreement are reserved.
+
+5. Third-Party Materials
+
+This license applies exclusively to intellectual property owned by the copyright holder. Third-party components remain governed by their respective licenses.
+
+6. Enforcement
+
+Unauthorized use of protected source code may constitute copyright infringement. The copyright holder reserves all remedies available under applicable law.
+
+7. Disclaimer
+
+THE SOURCE CODE IS PROVIDED “AS IS,” WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW.
+
+⸻
+
+ALL RIGHTS RESERVED. NO LICENSE GRANTED.
+
+
+See LICENSE for complete terms.
 
 See [LICENSE](./LICENSE).
